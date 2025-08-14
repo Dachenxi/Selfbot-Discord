@@ -1,1 +1,5 @@
-{"prefix": "!", "server": 950039010733076560, "virtual_fisher": {"bot_id": 574652751745777665, "delay": [60, 600], "sell_command_id": 912432960643416116, "fish_command_id": 912432960643416115, "verify_command_id": 912432961222238220}}
+{
+  "prefix": "!",
+  "main_server": 950039010733076560,
+  "owner_id": 669886098906021918
+}

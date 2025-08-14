@@ -2,7 +2,7 @@ import os
 import asyncio
 import discord
 from dotenv import load_dotenv
-from modules import bot, setup_logging, setup_cogs
+from modules import bot, setup_logging, setup_cogs, setup_events
 
 logger = setup_logging()
 load_dotenv(".env")
@@ -11,6 +11,7 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 async def run_bot():
     try:
         await setup_cogs()
+        setup_events()
         if not DISCORD_TOKEN:
             logger.error("Discord token not found!")
             return
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     try:
         loop.run_until_complete(run_bot())
     except KeyboardInterrupt:
-        loop.run_until_complete(stop_bot())
         logger.warning("The program is stopped by the user, the program will stop the bot.")
+        loop.run_until_complete(stop_bot())
     finally:
         loop.close()

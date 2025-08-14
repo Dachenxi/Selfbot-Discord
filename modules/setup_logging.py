@@ -3,7 +3,6 @@ import logging
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
-
 os.makedirs("log", exist_ok=True)
 log_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 def setup_logging():

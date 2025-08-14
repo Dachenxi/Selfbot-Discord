@@ -2,7 +2,6 @@ import logging
 import datetime
 from discord import Message
 from discord.ext import commands
-from modules import get_user_stats
 import json
 
 logger = logging.getLogger(__name__)
@@ -22,19 +21,6 @@ class Utilities(commands.Cog):
             logger.info("Mengirim pong")
         except Exception as e:
             logger.warning(f"Kesalahan terjadi dengan error {e}")
-
-    @commands.command(name="stats")
-    async def stats(self, message: commands.Context):
-        """Menampilkan statistik penggunaan command selfbot."""
-        try:
-            stats = await get_user_stats(self.bot.user.id)
-            if not stats:
-                await message.channel.send("Belum ada data penggunaan command.")
-                return
-            lines = [f"{cmd}: {total}" for cmd, total in stats]
-            await message.channel.send("Statistik Command:\n" + "\n".join(lines))
-        except Exception as e:
-            logger.warning(f"Gagal mengambil stats: {e}")
 
     @commands.command(name="testdm", aliases=["tdm"])
     async def testdm(self, message: commands.Context):

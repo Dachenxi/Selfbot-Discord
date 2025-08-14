@@ -1,13 +1,18 @@
 import logging
-import asyncio
 import discord
 from discord.ext import commands
 from discord import Message
+from .settings import Settings
 
 logger = logging.getLogger(__name__)
 prefix = "!"
 
-class Bot(commands.Bot):
+
+class SelfBot(commands.Bot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setting = Settings()
+
     async def on_message(self, context: Message):
         if not context.guild:
             return
@@ -35,8 +40,9 @@ class Bot(commands.Bot):
                 except Exception as e:
                     logger.info(f"Error when processing message. Message received {context.content} with error {e}")
 
-bot = Bot(
+
+bot = SelfBot(
     command_prefix=prefix,
     help_command=None,
-    status = discord.Status.online,
+    status=discord.Status.online,
 )
