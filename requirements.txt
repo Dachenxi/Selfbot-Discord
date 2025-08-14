@@ -1,0 +1,3 @@
+discord.py-self
+aiosqlite
+python-dotenv

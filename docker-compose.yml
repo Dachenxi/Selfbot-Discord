@@ -1,0 +1,30 @@
+services:
+  selfbot:
+    # Kalau mau rebuild lokal hapus baris image & aktifkan build
+    build: .
+    image: dachenxi/selfbot-discord:latest
+    container_name: selfbot-discord
+    env_file: .env
+    volumes:
+      - data_store:/app/data
+      - log_store:/app/log
+    restart: unless-stopped
+    # Alternatif lebih aman (butuh manual di host):
+    #   1) di VPS jalankan: sudo mkdir -p data log && sudo chown -R 1000:1000 data log
+    #   2) hapus user: root + command khusus di atas
+    # Atau gunakan named volume (tambahkan di bawah):
+    # volumes:
+    #   - data_store:/app/data
+    #   - log_store:/app/log
+  # Tidak expose port karena bot hanya koneksi keluar ke Discord
+
+# Catatan:
+# 1. Buat file .env (lihat .env.example) di direktori yang sama untuk inject DISCORD_TOKEN & OWNER_ID.
+# 2. Jalankan: docker compose up -d --build
+# 3. Lihat log: docker compose logs -f
+# 4. Setelah permission host dibenarkan, hapus user: root & command override untuk keamanan.
+
+# Named volumes (aktifkan kalau mau pakai)
+volumes:
+  data_store:
+  log_store:
