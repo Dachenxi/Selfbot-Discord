@@ -2,7 +2,7 @@ import re
 import asyncio
 import random
 import logging
-from modules import SelfBot
+from modules import Bot
 from discord.ext import commands, tasks
 from discord import Message, TextChannel, SlashCommand
 
@@ -18,7 +18,7 @@ class VirtualFisher(commands.Cog):
     fish_command: SlashCommand
     verify_command: SlashCommand
 
-    def __init__(self, bot: SelfBot):
+    def __init__(self, bot: Bot):
         self.bot = bot
         self.owner = self.bot.get_user(bot.setting.get("owner_id"))
         self.fish_counter = 0

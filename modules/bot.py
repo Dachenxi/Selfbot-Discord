@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 prefix = "!"
 
 
-class SelfBot(commands.Bot):
+class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setting = Settings()
@@ -41,7 +41,7 @@ class SelfBot(commands.Bot):
                     logger.info(f"Error when processing message. Message received {context.content} with error {e}")
 
 
-bot = SelfBot(
+bot = Bot(
     command_prefix=prefix,
     help_command=None,
     status=discord.Status.online,

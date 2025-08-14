@@ -1,5 +1,4 @@
 import logging
-import datetime
 from discord import Message
 from discord.ext import commands
 import json
