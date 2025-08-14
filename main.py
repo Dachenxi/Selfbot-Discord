@@ -26,6 +26,20 @@ async def stop_bot():
     await bot.close()
     logger.warning("Bot stopped")
 
+
+async def cleanup_tasks():
+    """Cancel all pending tasks except the current one"""
+    current_task = asyncio.current_task()
+    tasks = [task for task in asyncio.all_tasks() if task is not current_task]
+
+    if tasks:
+        logger.info(f"Cancelling {len(tasks)} pending tasks...")
+        for task in tasks:
+            task.cancel()
+
+        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("All pending tasks cancelled.")
+
 if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -34,5 +48,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.warning("The program is stopped by the user, the program will stop the bot.")
         loop.run_until_complete(stop_bot())
+        logger.warning("The program will clean up tasks now.")
+        loop.run_until_complete(cleanup_tasks())
     finally:
         loop.close()

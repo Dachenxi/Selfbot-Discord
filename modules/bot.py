@@ -30,9 +30,9 @@ class Bot(commands.Bot):
                         try:
                             args = parts[1] if len(parts) > 1 else ''
                             if args:
-                                await command(context, args)
+                                await command(context, args) # Although it is not the right type, it works.
                             else:
-                                await command(context)
+                                await command(context) # Although it is not the right type, it works.
                         except Exception as e:
                             logger.info(f"Receiving an error when attempting to send a command: {e}")
                     else:
