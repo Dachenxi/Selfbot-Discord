@@ -1,24 +1,23 @@
 import logging
 import discord
 from discord.ext import commands
-from discord import Message
 from .settings import Settings
 
 logger = logging.getLogger(__name__)
-prefix = "!"
 
+setting = Settings()
 
 class Bot(commands.Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setting = Settings()
+        self.setting = setting
 
-    async def on_message(self, context: Message):
+    async def on_message(self, context: discord.Message):
         if not context.guild:
             return
 
         if context.author.id == self.user.id:
-            if context.content.startswith(prefix):
+            if context.content.startswith(self.setting.get("prefix")):
                 try:
                     await context.delete()
                     parts = context.content[1:].split()
@@ -42,7 +41,7 @@ class Bot(commands.Bot):
 
 
 bot = Bot(
-    command_prefix=prefix,
+    command_prefix=setting.get("prefix"),
     help_command=None,
     status=discord.Status.online,
 )

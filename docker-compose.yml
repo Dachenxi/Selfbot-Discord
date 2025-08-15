@@ -5,26 +5,25 @@ services:
     image: dachenxi/selfbot-discord:latest
     container_name: selfbot-discord
     env_file: .env
+    user: "0:0"  # Run as root untuk mengatasi permission issue di Windows
     volumes:
-      - data_store:/app/data
-      - log_store:/app/log
+      - ./data:/app/data:rw
+      - ./log:/app/log:rw
     restart: unless-stopped
-    # Alternatif lebih aman (butuh manual di host):
-    #   1) di VPS jalankan: sudo mkdir -p data log && sudo chown -R 1000:1000 data log
-    #   2) hapus user: root + command khusus di atas
-    # Atau gunakan named volume (tambahkan di bawah):
-    # volumes:
-    #   - data_store:/app/data
-    #   - log_store:/app/log
-  # Tidak expose port karena bot hanya koneksi keluar ke Discord
+    # Menggunakan bind mount ke folder lokal dengan permission read-write
+    # User diset ke root untuk mengatasi permission error di Windows
+    # Folder data dan log akan dapat diakses langsung dari host
+    # Tidak expose port karena bot hanya koneksi keluar ke Discord
 
 # Catatan:
 # 1. Buat file .env (lihat .env.example) di direktori yang sama untuk inject DISCORD_TOKEN & OWNER_ID.
-# 2. Jalankan: docker compose up -d --build
-# 3. Lihat log: docker compose logs -f
-# 4. Setelah permission host dibenarkan, hapus user: root & command override untuk keamanan.
+# 2. User diset ke root (0:0) untuk mengatasi permission error di Windows
+# 3. Volume mount menggunakan :rw flag untuk read-write access
+# 4. Jalankan: docker compose up -d --build
+# 5. Lihat log: docker compose logs -f
+# 6. File data dan log dapat diakses langsung dari folder project
 
-# Named volumes (aktifkan kalau mau pakai)
-volumes:
-  data_store:
-  log_store:
+# Named volumes dihapus karena sekarang menggunakan bind mount
+# volumes:
+#   data_store:
+#   log_store:

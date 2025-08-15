@@ -29,5 +29,5 @@ class Settings:
 
     def save_settings(self):
         with open(self.path, "w") as f:
-            json.dump(self.settings, f)
+            json.dump(self.settings, f, indent=4)
 

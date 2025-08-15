@@ -42,25 +42,33 @@ class VirtualFisher(commands.Cog):
             logger.error(f"Error occurred while fishing: {e}")
             await asyncio.sleep(5)
 
-    async def _initialize_fishing_commands(self, channel):
-        """Initialize fishing and sell commands"""
+    async def _load_all_commands(self, ctx: Message):
+        """
+        Check whether the required command exists.
+        If not, retrieve the commands.
+        """
         if self.channel is None:
-            self.channel = channel
-
+            self.channel = ctx.channel
         if self.slash_commands is None:
-            self.slash_commands = await channel.application_commands()
-
-        if self.sell_command is None or self.fish_command is None:
-            for cmd in self.slash_commands:
-                if cmd.id == 912432960643416115:  # Fish commands id
-                    self.fish_command = cmd
-                elif cmd.id == 912432960643416116:  # sell command id
-                    self.sell_command = cmd
+            self.slash_commands = await ctx.guild.application_commands()
+        if (
+            self.fish_command is None
+            or self.sell_command is None
+            or self.verify_command is None
+        ):
+            for slash in self.slash_commands:
+                if slash.id == 912432960643416115: # Fish command id
+                    self.fish_command = slash
+                elif slash.id == 912432960643416116: # Sell command id
+                    self.sell_command = slash
+                elif slash.id == 912432961222238220: # Verify command id
+                    self.verify_command = slash
 
     @commands.command(name="startfishing")
     async def startfishing(self, ctx: commands.Context):
-        await self._initialize_fishing_commands(ctx.channel)
-
+        await self._load_all_commands(ctx)
+        print(self.slash_commands)
+        print(self.fish_command, self.sell_command)
         if not (self.fish_command and self.sell_command):
             await ctx.channel.send("Failed to find slash command.")
             return
@@ -80,17 +88,6 @@ class VirtualFisher(commands.Cog):
         else:
             await ctx.channel.send("Fishing task not running")
 
-    async def _ensure_slash_commands(self, channel):
-        """Ensure slash commands are loaded"""
-        if self.slash_commands is None:
-            self.slash_commands = await channel.application_commands()
-
-        if self.verify_command is None:
-            for command in self.slash_commands:
-                if command.id == 912432961222238220:
-                    self.verify_command = command
-                    break
-
     async def _handle_antibot_verification(self, ctx: Message, embed):
         """Handle anti-bot verification process"""
         # Stop fishing task
@@ -98,7 +95,7 @@ class VirtualFisher(commands.Cog):
             self.fish_task.cancel()
             logger.info("Terminate fish task because there is anti bot")
 
-        await self._ensure_slash_commands(ctx.channel)
+        await self._load_all_commands(ctx.channel)
 
         # Auto-solve text verification
         if self.verify_command and "Code" in embed.description:
@@ -130,7 +127,7 @@ class VirtualFisher(commands.Cog):
 
     async def _handle_owner_verify_command(self, ctx: Message):
         """Handle verify command from owner"""
-        await self._ensure_slash_commands(ctx.channel)
+        await self._load_all_commands(ctx.channel)
 
         parts = ctx.content.split(None, 1)
         if not (self.verify_command and len(parts) == 2 and parts[1].strip()):
