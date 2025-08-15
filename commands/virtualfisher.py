@@ -67,8 +67,6 @@ class VirtualFisher(commands.Cog):
     @commands.command(name="startfishing")
     async def startfishing(self, ctx: commands.Context):
         await self._load_all_commands(ctx)
-        print(self.slash_commands)
-        print(self.fish_command, self.sell_command)
         if not (self.fish_command and self.sell_command):
             await ctx.channel.send("Failed to find slash command.")
             return
