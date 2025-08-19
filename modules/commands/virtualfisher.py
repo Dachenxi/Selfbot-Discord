@@ -5,8 +5,7 @@ import asyncio
 import re
 import json
 from discord.ext import commands, tasks
-from discord import TextChannel, SlashCommand, Interaction
-
+from discord import TextChannel, SlashCommand
 logger = logging.getLogger(__name__)
 
 # noinspection PyTypeChecker

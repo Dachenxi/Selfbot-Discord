@@ -160,7 +160,7 @@ class Database:
 
         await self._execute_with_retry(_execute_operation)
 
-    async def fetch(self, query: str, args: tuple = None, one: bool = False):
+    async def fetch(self, query: str, args: tuple = None, one: bool = False) -> dict | None:
         """Fetch data from database."""
         if not self.pool:
             logger.error("Database pool is not initialized. Call connect() first.")
