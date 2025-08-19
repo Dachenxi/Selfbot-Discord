@@ -28,7 +28,7 @@ class VirtualFisher(commands.Cog):
         interaction = await self.fish_command.__call__(self.channel)
         await self._anti_bot_resolve(interaction.message.id)
         if self.data["trips"] % 10 == 0:
-            interaction = await self.sell_command.__call__(self.channel)
+            interaction = await self.sell_command.__call__(self.channel, amount="all")
             await self._anti_bot_resolve(interaction.message.id)
 
         await self.bot.database.execute("UPDATE virtualfisher SET trips = %s WHERE user_id = %s",
@@ -39,6 +39,9 @@ class VirtualFisher(commands.Cog):
         """Anti bot message example:
         Code: **D8fQ**\n\nPlease use **/verify ``D8fQ``** to continue playing."""
         message = await self.channel.fetch_message(interaction_id)
+        if not message.embeds:
+            logger.warning("Message is not an embed, skipping anti-bot check")
+            return
         embed = message.embeds[0]
         embed_dict = json.dumps(embed.to_dict())
         if (
@@ -46,7 +49,7 @@ class VirtualFisher(commands.Cog):
                 and ("anti-bot" in embed.title.lower() or
                      "code" in embed.description.lower())
         ):
-            notif = self.bot.telegram_notif.send_message(f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed.to_dict()}\n```")
+            notif = self.bot.telegram_notif.send_message(f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```")
             code_search = re.search(r"Code: \*\*(\w+)\*\*", embed.description)
             if code_search:
                 code = code_search.group(1)
@@ -89,7 +92,7 @@ class VirtualFisher(commands.Cog):
         await self.fisher_tasks.start()
         await ctx.channel.send("Fisher is starting")
 
-    @commands.command(name="stopfisher", aliases= ["sf"])
+    @commands.command(name="stopfisher", aliases=["sf"])
     async def stopfisher(self, ctx: commands.Context):
         if not self.fisher_tasks.is_running():
             await ctx.channel.send("Fisher task is not running.")
