@@ -22,10 +22,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create data & log directories (can also be mounted as volumes)
-RUN mkdir -p data log \
-	&& useradd -m appuser \
-	&& chown -R appuser:appuser /app
+# Create database & log directories with proper permissions
+RUN mkdir -p database log \
+	&& useradd -m -u 1000 appuser \
+	&& chown -R appuser:appuser /app \
+	&& chmod -R 755 /app/database \
+	&& chmod -R 755 /app/log
 
 USER appuser
 

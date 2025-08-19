@@ -3,6 +3,7 @@ import asyncio
 import discord
 from dotenv import load_dotenv
 from modules import bot, setup_logging, setup_cogs, setup_events
+from database.database import db
 
 logger = setup_logging()
 load_dotenv(".env")
@@ -10,6 +11,9 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
 async def run_bot():
     try:
+        logger.info("Starting database Connection!")
+        await db.connect()
+        logger.info("Database connection established successfully!.")
         await setup_cogs()
         setup_events()
         if not DISCORD_TOKEN:
@@ -21,34 +25,21 @@ async def run_bot():
         await bot.close()
         await asyncio.sleep(5)
 
-async def stop_bot():
-    await bot.change_presence(status=discord.Status.offline)
-    await bot.close()
-    logger.warning("Bot stopped")
-
-
-async def cleanup_tasks():
-    """Cancel all pending tasks except the current one"""
-    current_task = asyncio.current_task()
-    tasks = [task for task in asyncio.all_tasks() if task is not current_task]
-
-    if tasks:
-        logger.info(f"Cancelling {len(tasks)} pending tasks...")
-        for task in tasks:
-            task.cancel()
-
-        await asyncio.gather(*tasks, return_exceptions=True)
-        logger.info("All pending tasks cancelled.")
+async def exception_handler(loop, context):
+    exception = context.get("exception")
+    if isinstance(exception, (asyncio.CancelledError, KeyboardInterrupt)) or 'KeyboardInterrupt' in str(context):
+        logger.warning("The program is stopped by the user, the program will stop the bot.")
+        loop.stop()
+        return
+    loop.set_exception_handler(context)
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    event = asyncio.new_event_loop()
+    asyncio.set_event_loop(event)
+    event.set_exception_handler(exception_handler)
     try:
-        loop.run_until_complete(run_bot())
+        event.run_until_complete(run_bot())
     except KeyboardInterrupt:
-        logger.warning("The program is stopped by the user, the program will stop the bot.")
-        loop.run_until_complete(stop_bot())
-        logger.warning("The program will clean up tasks now.")
-        loop.run_until_complete(cleanup_tasks())
+        pass
     finally:
-        loop.close()
+        event.close()

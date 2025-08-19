@@ -7,7 +7,7 @@ services:
     env_file: .env
     user: "0:0"  # Run as root untuk mengatasi permission issue di Windows
     volumes:
-      - ./data:/app/data:rw
+      - ./database:/app/database:rw
       - ./log:/app/log:rw
     restart: unless-stopped
     # Menggunakan bind mount ke folder lokal dengan permission read-write
@@ -21,7 +21,7 @@ services:
 # 3. Volume mount menggunakan :rw flag untuk read-write access
 # 4. Jalankan: docker compose up -d --build
 # 5. Lihat log: docker compose logs -f
-# 6. File data dan log dapat diakses langsung dari folder project
+# 6. File database dan log dapat diakses langsung dari folder project
 
 # Named volumes dihapus karena sekarang menggunakan bind mount
 # volumes:
