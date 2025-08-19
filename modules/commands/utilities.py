@@ -1,5 +1,4 @@
 import logging
-from discord import Message
 from discord.ext import commands
 import json
 
@@ -22,7 +21,7 @@ class Utilities(commands.Cog):
             logger.warning(f"Kesalahan terjadi dengan error {e}")
 
     @commands.command(name="testdm", aliases=["tdm"])
-    async def testdm(self, message: commands.Context):
+    async def testdm(self):
         try:
             people = self.bot.get_user(669886098906021918)
             await people.send("TestDM")
@@ -31,8 +30,8 @@ class Utilities(commands.Cog):
             logger.warning(f"Gagal mengirim DM. {e}")
 
     @commands.command(name="scrap",aliases=['sc'])
-    async def scrap(self, ctx: Message):
-        fetch_message = await ctx.channel.fetch_message(ctx.reference.message_id)
+    async def scrap(self, ctx: commands.Context):
+        fetch_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
         scrapped_data = {
             "content": fetch_message.content,
             "author": fetch_message.author.name,
@@ -48,15 +47,15 @@ class Utilities(commands.Cog):
         await ctx.channel.send(f"```json\n{scrapped_data}\n```")
 
     @commands.command(name="scrapvf")
-    async def scrapvf(self, ctx: Message):
-        """Scrap data dari pesan virtualfisher."""
-        fetch_message = await ctx.channel.fetch_message(ctx.reference.message_id)
+    async def scrapvf(self, ctx: commands.Context):
+        """Scrap database dari pesan virtualfisher."""
+        fetch_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
         if fetch_message.embeds:
             for embed in fetch_message.embeds:
                 title_lower = (embed.title or "").lower()
                 if "inventory" in title_lower:
                     description = (embed.description or "")
-                    # Parse the VirtualFisher data
+                    # Parse the VirtualFisher database
                     vf_data = {
                         "clan": "",
                         "balance": "",
@@ -110,7 +109,7 @@ class Utilities(commands.Cog):
                         elif line.startswith("Fish Value:"):
                             vf_data["fish_value"] = line.split("**")[1]
 
-                        # Parse fish data
+                        # Parse fish database
                         elif current_section and line.startswith("**") and "**" in line[2:]:
                             try:
                                 # Extract quantity and fish name
@@ -128,7 +127,7 @@ class Utilities(commands.Cog):
                     json_data = json.dumps(vf_data, indent=2, ensure_ascii=False)
                     await ctx.channel.send(f"```json\n{json_data}\n```")
         else:
-            await ctx.channel.send("Pesan yang direferensikan bukan data VirtualFisher inventory.")
+            await ctx.channel.send("Pesan yang direferensikan bukan database VirtualFisher inventory.")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Utilities(bot))

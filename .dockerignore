@@ -12,7 +12,7 @@ venv/
 .git
 .gitignore
 
-# Local data/logs (mount as volumes instead)
+# Local database/logs (mount as volumes instead)
 log/
 *.log
 
