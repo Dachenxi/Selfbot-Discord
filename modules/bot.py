@@ -2,6 +2,7 @@ import logging
 import discord
 from discord.ext import commands
 from database.database import db, Database
+from .telegram import notif, Telegram
 
 logger = logging.getLogger(__name__)
 
@@ -9,11 +10,13 @@ class Bot(commands.Bot):
     def __init__(
             self,
             database_conn: Database,
+            telegram_notif: Telegram,
             *args,
             **kwargs
     ):
         super().__init__(*args, **kwargs)
         self.database = database_conn
+        self.telegram_notif = telegram_notif
 
     async def parse(self, message: discord.Message):
         if not message.guild:
@@ -70,6 +73,7 @@ class Bot(commands.Bot):
 bot = Bot(
     command_prefix="!",
     database_conn=db,
+    telegram_notif=notif,
     help_command=None,
     status=discord.Status.online,
 )
