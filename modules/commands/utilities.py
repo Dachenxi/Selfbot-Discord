@@ -34,7 +34,13 @@ class Utilities(commands.Cog):
 
     @commands.command(name="antibot checker", aliases=["ac"])
     async def antibot_checker(self, ctx: commands.Context):
+        if ctx.message.reference is None:
+            await ctx.send("Please to message to use this commands, and make sure the message has embed.")
+            return
         fetch_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+        if not fetch_message.embeds:
+            await ctx.send("The referenced message does not contain any embeds.")
+            return
         embed = fetch_message.embeds[0]
         embed_dict = json.dumps(embed.to_dict(), indent=4)
         if (
