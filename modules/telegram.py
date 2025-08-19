@@ -44,9 +44,9 @@ class Telegram:
         except requests.RequestException as e:
             print(f"Error editing message in Telegram: {e}")
             return None
-if __name__ == "__main__":
-    dotenv.load_dotenv(".env")
-    notif = Telegram(
-        token=os.getenv("TELEGRAM_TOKEN"),
-        chat_id=int(os.getenv("CHAT_ID"))
-    )
+
+dotenv.load_dotenv(".env")
+notif = Telegram(
+    token=os.getenv("TELEGRAM_TOKEN"),
+    chat_id=int(os.getenv("CHAT_ID"))
+)
