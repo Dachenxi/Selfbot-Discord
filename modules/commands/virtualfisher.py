@@ -41,7 +41,8 @@ class VirtualFisher(commands.Cog):
                     self.sell_command = cmd
                 elif cmd.id == 912432961222238220:
                     self.verify_command = cmd
-                break
+                if self.fish_command and self.sell_command and self.verify_command:
+                    break
 
     @commands.command(name="fisher")
     async def fisher(self, ctx: commands.Context):

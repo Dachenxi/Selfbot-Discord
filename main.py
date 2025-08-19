@@ -31,7 +31,7 @@ async def exception_handler(loop, context):
         logger.warning("The program is stopped by the user, the program will stop the bot.")
         loop.stop()
         return
-    loop.set_exception_handler(context)
+    loop.default_exception_handler(context)
 
 if __name__ == "__main__":
     event = asyncio.new_event_loop()

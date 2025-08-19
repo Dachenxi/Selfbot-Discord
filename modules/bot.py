@@ -37,7 +37,7 @@ class Bot(commands.Bot):
                             else:
                                 await command(ctx) # Although it is not the right type, it works.
                         except Exception as e:
-                            logger.info(f"Receiving an error when attempting to send a command: {e}")
+                            logger.error(f"Receiving an error when attempting to send a command: {e}")
                     else:
                         await message.reply("There is no command with that name!")
                 except Exception as e:

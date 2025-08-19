@@ -1,18 +1,18 @@
-create table `user` if not exist (
+CREATE TABLE if not exists `user` (
     `user_id` bigint NOT NULL,
     `global_name` varchar(45) NOT NULL,
     PRIMARY KEY (`user_id`),
     UNIQUE KEY `user_id_UNIQUE` (`user_id`)
 );
 
-create table `virtualfisher` if not exist (
+CREATE TABLE if not exists `virtualfisher` (
     `id` int NOT NULL AUTO_INCREMENT,
     `user_id` bigint NOT NULL,
     `level` int DEFAULT '0',
     `money` int DEFAULT '0',
     `clan` varchar(255) DEFAULT 'no clan',
     `biome` varchar(255) DEFAULT 'River',
-    `trip` int DEFAULT '0' NULL
+    `trip` int DEFAULT '0' NULL,
     PRIMARY KEY (`id`),
     KEY `user_id_idx` (`user_id`),
     CONSTRAINT `virtualfisher_user_id`
@@ -20,7 +20,7 @@ create table `virtualfisher` if not exist (
             REFERENCES `user` (`user_id`)
 );
 
-create table `settings` if not exist (
+CREATE TABLE IF NOT EXISTS`settings` (
     `id` int NOT NULL AUTO_INCREMENT,
     `user_id` bigint NOT NULL,
     `prefix` varchar(45) DEFAULT '!',
