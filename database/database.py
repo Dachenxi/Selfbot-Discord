@@ -4,7 +4,6 @@ import dotenv
 import os
 import logging
 import asyncio
-from typing import Optional, Any, Union
 
 logger = logging.getLogger(__name__)
 
