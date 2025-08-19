@@ -1,7 +1,9 @@
 import aiomysql
+import pymysql
 import dotenv
 import os
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,73 @@ class Database:
         self.password = password
         self.db = database
         self.pool = None
+        self.max_retries = 3
+        self.retry_delay = 1  # seconds
+
+    async def _is_connection_alive(self) -> bool:
+        """Check if the database connection pool is alive."""
+        if not self.pool:
+            return False
+
+        try:
+            async with self.pool.acquire() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.execute("SELECT 1")
+                    await cursor.fetchone()
+            return True
+        except (pymysql.err.OperationalError, aiomysql.Error, Exception):
+            return False
+
+    async def _reconnect(self):
+        """Reconnect to the database."""
+        logger.warning("Attempting to reconnect to database...")
+
+        if self.pool:
+            try:
+                self.pool.close()
+                await self.pool.wait_closed()
+            except Exception as e:
+                logger.error(f"Error closing old pool: {e}")
+
+        await self.connect()
+
+    async def _execute_with_retry(self, operation, *args, **kwargs):
+        """Execute database operation with retry logic for connection errors."""
+        last_exception = None
+
+        for attempt in range(self.max_retries):
+            try:
+                if not await self._is_connection_alive():
+                    await self._reconnect()
+
+                return await operation(*args, **kwargs)
+
+            except (pymysql.err.OperationalError, aiomysql.Error) as e:
+                last_exception = e
+                error_code = getattr(e, 'args', [None])[0] if hasattr(e, 'args') and e.args else None
+
+                # Check for connection-related errors
+                if error_code in (2006, 2013, 2055):  # MySQL server has gone away, Lost connection, etc.
+                    logger.warning(f"Connection error (attempt {attempt + 1}/{self.max_retries}): {e}")
+
+                    if attempt < self.max_retries - 1:
+                        await asyncio.sleep(self.retry_delay * (attempt + 1))  # Exponential backoff
+                        try:
+                            await self._reconnect()
+                        except Exception as reconnect_error:
+                            logger.error(f"Reconnection failed: {reconnect_error}")
+                    continue
+                else:
+                    # Non-connection related error, don't retry
+                    raise e
+
+            except Exception as e:
+                logger.error(f"Unexpected error in database operation: {e}")
+                raise e
+
+        # If all retries failed
+        logger.error(f"All retry attempts failed. Last error: {last_exception}")
+        raise last_exception
 
     async def check_tables(self):
         """Check if the required tables exist in the database."""
@@ -25,7 +94,7 @@ class Database:
             logger.error("Database pool is not initialized. Call connect() first.")
             return
 
-        try:
+        async def _check_tables_operation():
             async with self.pool.acquire() as conn:
                 async with conn.cursor() as cursor:
                     await cursor.execute("SHOW TABLES;")
@@ -40,6 +109,9 @@ class Database:
                         await self.create_tables()
                     else:
                         logger.info("All required tables are present.")
+
+        try:
+            await self._execute_with_retry(_check_tables_operation)
         except Exception as e:
             logger.error(f"Error checking tables: {e}")
 
@@ -52,7 +124,12 @@ class Database:
                 user=self.user,
                 password=self.password,
                 db=self.db,
-                autocommit=True
+                autocommit=True,
+                # Connection pool settings for better reliability
+                minsize=1,
+                maxsize=10,
+                pool_recycle=3600,  # Recycle connections every hour
+                charset='utf8mb4'
             )
             logger.info("Database connection pool created successfully.")
             await self.check_tables()
@@ -72,34 +149,40 @@ class Database:
             logger.error("Database pool is not initialized. Call connect() first.")
             return
 
-        logger.info(f"Executing query: {query} with args: {args}")
-        async with self.pool.acquire() as conn:
-            async with conn.cursor() as cursor:
-                if args:
-                    await cursor.execute(query, args)
-                else:
-                    await cursor.execute(query)
+        async def _execute_operation():
+            logger.info(f"Executing query: {query} with args: {args}")
+            async with self.pool.acquire() as conn:
+                async with conn.cursor() as cursor:
+                    if args:
+                        await cursor.execute(query, args)
+                    else:
+                        await cursor.execute(query)
 
-    async def fetch(self, query: str, args: tuple = None, one: bool = False):
+        await self._execute_with_retry(_execute_operation)
+
+    async def fetch(self, query: str, args: tuple = None, one: bool = False) -> dict | None:
         """Fetch data from database."""
         if not self.pool:
             logger.error("Database pool is not initialized. Call connect() first.")
             return None
 
-        logger.info(f"Fetching data with query: {query} with args: {args}")
-        async with self.pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cursor:
-                if args:
-                    await cursor.execute(query, args)
-                else:
-                    await cursor.execute(query)
+        async def _fetch_operation():
+            logger.info(f"Fetching data with query: {query} with args: {args}")
+            async with self.pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cursor:
+                    if args:
+                        await cursor.execute(query, args)
+                    else:
+                        await cursor.execute(query)
 
-                if one:
-                    result = await cursor.fetchone()
-                    return result if result else None
-                else:
-                    result = await cursor.fetchall()
-                    return result
+                    if one:
+                        result = await cursor.fetchone()
+                        return result if result else None
+                    else:
+                        result = await cursor.fetchall()
+                        return result
+
+        return await self._execute_with_retry(_fetch_operation)
 
     async def create_tables(self):
         """Create database tables from SQL file."""

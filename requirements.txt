@@ -2,4 +2,5 @@ discord.py-self
 aiosqlite
 python-dotenv
 aiomysql
+pymysql
 requests

@@ -1,5 +1,7 @@
+import os
 
 import requests
+import dotenv
 
 class Telegram:
     def __init__(self,
@@ -42,3 +44,9 @@ class Telegram:
         except requests.RequestException as e:
             print(f"Error editing message in Telegram: {e}")
             return None
+
+dotenv.load_dotenv(".env")
+notif = Telegram(
+    token=os.getenv("TELEGRAM_TOKEN"),
+    chat_id=int(os.getenv("CHAT_ID"))
+)
