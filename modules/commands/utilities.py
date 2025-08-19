@@ -1,11 +1,14 @@
+import asyncio
 import logging
 from discord.ext import commands
 import json
+import re
+import modules
 
 logger = logging.getLogger(__name__)
 
 class Utilities(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: modules.Bot):
         self.bot = bot
 
     @commands.command(name="ping", aliases=["p"])
@@ -21,13 +24,34 @@ class Utilities(commands.Cog):
             logger.warning(f"Kesalahan terjadi dengan error {e}")
 
     @commands.command(name="testdm", aliases=["tdm"])
-    async def testdm(self):
+    async def testdm(self, ctx: commands.Context):
         try:
             people = self.bot.get_user(669886098906021918)
             await people.send("TestDM")
 
         except Exception as e:
             logger.warning(f"Gagal mengirim DM. {e}")
+
+    @commands.command(name="antibot checker", aliases=["ac"])
+    async def antibot_checker(self, ctx: commands.Context):
+        fetch_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+        embed = fetch_message.embeds[0]
+        embed_dict = json.dumps(embed.to_dict(), indent=4)
+        if (
+                embed.title is not None
+                and ("anti-bot" in embed.title.lower() or
+                     "code" in embed.description.lower())
+        ):
+            notif = self.bot.telegram_notif.send_message(f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```")
+            code_search = re.search(r'Code: \*\*(\w+)\*\*', embed.description)
+            await asyncio.sleep(1)
+            if code_search:
+                code = code_search.group(1)
+                self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
+                                                     f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\nFound Code: `{code}`")
+            else:
+                self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
+                                                     f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\nNo Code Found in the message")
 
     @commands.command(name="scrap",aliases=['sc'])
     async def scrap(self, ctx: commands.Context):

@@ -2,8 +2,10 @@ import logging
 import random
 import modules
 import asyncio
+import re
+import json
 from discord.ext import commands, tasks
-from discord import TextChannel, SlashCommand
+from discord import TextChannel, SlashCommand, Interaction
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +26,37 @@ class VirtualFisher(commands.Cog):
             return
 
         self.data["trips"] += 1
-        await self.fish_command.__call__(self.channel)
+        interaction = await self.fish_command.__call__(self.channel)
+        await self._anti_bot_resolve(interaction.message.id)
+        if self.data["trips"] % 10 == 0:
+            interaction = await self.sell_command.__call__(self.channel)
+            await self._anti_bot_resolve(interaction.message.id)
+
+        await self.bot.database.execute("UPDATE virtualfisher SET trips = %s WHERE user_id = %s",
+                                        (self.data["trips"], self.bot.user.id))
         await asyncio.sleep(random.randint(60, 600))
+
+    async def _anti_bot_resolve(self, interaction_id: int):
+        """Anti bot message example:
+        Code: **D8fQ**\n\nPlease use **/verify ``D8fQ``** to continue playing."""
+        message = await self.channel.fetch_message(interaction_id)
+        embed = message.embeds[0]
+        embed_dict = json.dumps(embed.to_dict())
+        if (
+                embed.title is not None 
+                and ("anti-bot" in embed.title.lower() or
+                     "code" in embed.description.lower())
+        ):
+            notif = self.bot.telegram_notif.send_message(f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed.to_dict()}\n```")
+            code_search = re.search(r"Code: \*\*(\w+)\*\*", embed.description)
+            if code_search:
+                code = code_search.group(1)
+                self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
+                                                     f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\nFound Code: `{code}`")
+            else:
+                self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
+                                                     f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\nNo Code Found in the message")
+                self.fisher_tasks.stop()
 
     async def _load_slash_commands(self, channel: TextChannel):
         slash_commands = await channel.application_commands()
@@ -59,7 +90,7 @@ class VirtualFisher(commands.Cog):
         await self.fisher_tasks.start()
         await ctx.channel.send("Fisher is starting")
 
-    @commands.command(name="stopfisher")
+    @commands.command(name="stopfisher", aliases= ["sf"])
     async def stopfisher(self, ctx: commands.Context):
         if not self.fisher_tasks.is_running():
             await ctx.channel.send("Fisher task is not running.")
