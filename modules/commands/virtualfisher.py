@@ -20,20 +20,24 @@ class VirtualFisher(commands.Cog):
 
     @tasks.loop(seconds=5)
     async def fisher_tasks(self):
-        if self.channel is None:
-            logger.warning("Channel is not set, skipping fisher task")
-            return
+        try:
+            if self.channel is None:
+                logger.warning("Channel is not set, skipping fisher task")
+                return
 
-        self.data["trips"] += 1
-        interaction = await self.fish_command.__call__(self.channel)
-        await self._anti_bot_resolve(interaction.message.id)
-        if self.data["trips"] % 10 == 0:
-            interaction = await self.sell_command.__call__(self.channel, amount="all")
+            self.data["trips"] += 1
+            interaction = await self.fish_command.__call__(self.channel)
             await self._anti_bot_resolve(interaction.message.id)
+            if self.data["trips"] % 10 == 0:
+                interaction = await self.sell_command.__call__(self.channel, amount="all")
+                await self._anti_bot_resolve(interaction.message.id)
 
-        await self.bot.database.execute("UPDATE virtualfisher SET trips = %s WHERE user_id = %s",
-                                        (self.data["trips"], self.bot.user.id))
-        await asyncio.sleep(random.randint(60, 600))
+            await self.bot.database.execute("UPDATE virtualfisher SET trips = %s WHERE user_id = %s",
+                                            (self.data["trips"], self.bot.user.id))
+            await asyncio.sleep(random.randint(300, 600))
+        except Exception as e:
+            logger.error(f"Error in fisher task: {e}")
+            await asyncio.sleep(5)
 
     async def _anti_bot_resolve(self, interaction_id: int):
         """Anti bot message example:
