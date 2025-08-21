@@ -155,10 +155,8 @@ class Database:
                 async with conn.cursor() as cursor:
                     if args:
                         await cursor.execute(query, args)
-                        await asyncio.sleep(0.3)
                     else:
                         await cursor.execute(query)
-                        await asyncio.sleep(0.3)
 
         await self._execute_with_retry(_execute_operation)
 
@@ -174,10 +172,8 @@ class Database:
                 async with conn.cursor(aiomysql.DictCursor) as cursor:
                     if args:
                         await cursor.execute(query, args)
-                        await asyncio.sleep(0.3)
                     else:
                         await cursor.execute(query)
-                        await asyncio.sleep(0.3)
 
                     if one:
                         result = await cursor.fetchone()

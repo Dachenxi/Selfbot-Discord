@@ -47,10 +47,16 @@ class VirtualFisher(commands.Cog):
         try:
             if self.data["emerald_fish"] > 8:
                 interaction = await self.buy_command.__call__(self.channel, item="Auto30m")
+                self.data["emerald_fish"] -= 8
+                await self.bot.database.execute("UPDATE virtualfisher SET emerald_fish = %s WHERE user_id = %s",
+                                                (self.data["emerald_fish"], self.bot.user.id))
                 delay = await self._check_interaction(interaction)
                 await asyncio.sleep(delay)
             elif self.data["gold_fish"] > 8:
                 interaction = await self.buy_command.__call__(self.channel, item="Auto10m")
+                self.data["gold_fish"] -= 8
+                await self.bot.database.execute("UPDATE virtualfisher SET gold_fish = %s WHERE user_id = %s",
+                                                (self.data["gold_fish"], self.bot.user.id))
                 delay = await self._check_interaction(interaction)
                 await asyncio.sleep(delay)
         except discord.InvalidData:
@@ -95,16 +101,17 @@ class VirtualFisher(commands.Cog):
 
     async def _worker_hired(self, embed: Embed):
         search = re.search(r"the next \*\*(\d+)\*\* minutes", embed.description)
-        delay = int(search.group(1))
-        text = {
-            "title": "Worker Hired",
-            "description": f"Worker hired for the next {delay} minutes",
-            "delay": delay * 60
-        }
-        if delay:
+        if search is not None:
+            delay = int(search.group(1))
+            text = {
+                "title": "Worker Hired",
+                "description": f"Worker hired for the next {delay} minutes",
+                "delay": delay * 60
+            }
             self.bot.telegram_notif.send_message(f"```json\n{json.dumps(text, indent=4)}\n```")
             return delay * 60  # Convert minutes to seconds
         else:
+            logger.warning("No delay found in worker hired message, using default")
             return 1900
 
     async def _worker_check(self, embed: Embed):
@@ -117,15 +124,19 @@ class VirtualFisher(commands.Cog):
     async def _anti_bot_resolve(self, embed: Embed, message: Message):
         """Anti bot message example:
         Code: **D8fQ**\n\nPlease use **/verify ``D8fQ``** to continue playing."""
-        notif = self.bot.telegram_notif.send_message(f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed}\n```")
+        embed_dict = json.dumps(embed.to_dict(), indent=4)
+        notif = self.bot.telegram_notif.send_message(f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```")
         code_search = re.search(r"Code: \*\*(\w+)\*\*", embed.description)
         if code_search:
             code = code_search.group(1)
             self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
-                                                 f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed}\n```\nFound Code: `{code}`")
+                                                 f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\nFound Code: `{code}`")
+            await self.verify_command.__call__(self.channel, answer=code)
+            await self.fisher_tasks.start()
+
         else:
             self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
-                                                 f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed}\n```\n\nIt seems the anti bot is an image. Sending to Owner for manual solve")
+                                                 f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\n\nIt seems the anti bot is an image. Sending to Owner for manual solve")
             self.fisher_tasks.stop()
             await message.forward(self.bot.owner)
 
@@ -237,7 +248,7 @@ class VirtualFisher(commands.Cog):
         gold_fish_pattern = r"\*\*([\d,]+)\*\* <:\w+:\d+> Gold Fish"
         emerald_fish_pattern = r"\*\*([\d,]+)\*\* <:\w+:\d+> Emerald Fish"
 
-        if not "inventory" in reply_message.embeds[0].title.lower():
+        if reply_message.embeds is not None and "inventory" in reply_message.embeds[0].title.lower():
             await ctx.channel.send("Please reply to a valid virtual fish inventory message. That only has inventory embed in it")
             return
 
@@ -249,8 +260,10 @@ class VirtualFisher(commands.Cog):
 
         self.data["clan"] = clan_match.group(1) if clan_match else ""
         self.data["biome"] = biome_match.group(1) if biome_match else ""
-        self.data["gold_fish"] += int(gold_fish_match.group(1).replace(",", "")) if gold_fish_match else 0
-        self.data["emerald_fish"] += int(emerald_fish_match.group(1).replace(",", "")) if emerald_fish_match else 0
+        if gold_fish_match:
+            self.data["gold_fish"] += int(gold_fish_match.group(1).replace(",", ""))
+        if emerald_fish_match:
+            self.data["emerald_fish"] += int(emerald_fish_match.group(1).replace(",", ""))
 
         notif = {
             "title": "Virtual Fisher Data Update",
@@ -263,7 +276,7 @@ class VirtualFisher(commands.Cog):
                 "trips": self.data["trips"]
             }
         }
-        self.bot.telegram_notif.send_message(f"```json\n{json.dumps(self.data, indent=4)}\n```")
+        self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif, indent=4)}\n```")
         await self.bot.database.execute("UPDATE virtualfisher SET clan = %s, biome = %s, gold_fish = %s, emerald_fish = %s WHERE user_id = %s",
                                         (self.data["clan"],
                                          self.data["biome"],
