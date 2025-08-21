@@ -68,11 +68,11 @@ class VirtualFisher(commands.Cog):
             interaction_message = await self.channel.fetch_message(interaction.message.id)
             if interaction_message is None:
                 logger.warning("Message not found")
-                return
+                return None
 
             if not interaction_message.embeds:
                 logger.warning("Embeds not found in interaction message")
-                return
+                return None
 
             for embed in interaction_message.embeds:
                 if (
@@ -95,6 +95,14 @@ class VirtualFisher(commands.Cog):
                     logger.info("Hired worker message detected")
                     delay = await self._worker_hired(embed)
                     return delay
+                if (
+                    embed.description is not None
+                    and ("crate" in embed.description.lower()
+                         or "chest" in embed.description.lower())
+                ):
+                    logger.info("Crate message detected")
+                    await self._crate(embed)
+                    return None
 
         except Exception as e:
             logger.error(f"Error in check interaction: {e}")
@@ -248,7 +256,7 @@ class VirtualFisher(commands.Cog):
         gold_fish_pattern = r"\*\*([\d,]+)\*\* <:\w+:\d+> Gold Fish"
         emerald_fish_pattern = r"\*\*([\d,]+)\*\* <:\w+:\d+> Emerald Fish"
 
-        if reply_message.embeds is not None and "inventory" in reply_message.embeds[0].title.lower():
+        if not "inventory" in reply_message.embeds[0].title.lower():
             await ctx.channel.send("Please reply to a valid virtual fish inventory message. That only has inventory embed in it")
             return
 
