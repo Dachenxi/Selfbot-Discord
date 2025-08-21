@@ -1,6 +1,8 @@
 import asyncio
 import logging
+from datetime import datetime
 from discord.ext import commands
+from discord import Embed, Message
 import json
 import re
 import modules
@@ -31,6 +33,55 @@ class Utilities(commands.Cog):
 
         except Exception as e:
             logger.warning(f"Gagal mengirim DM. {e}")
+
+    @commands.command(name="interactiontest", aliases=["it"])
+    async def interaction_test(self, ctx: commands.Context):
+        try:
+            interaction_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+            if interaction_message is None:
+                logger.warning("Message not found")
+                return
+
+            if not interaction_message.embeds:
+                logger.warning("Embeds not found in interaction message")
+                return
+            for embed in interaction_message.embeds:
+                if (
+                        embed.description is not None
+                        and "worker" in embed.description.lower()
+                ):
+                    await self._worker_check(embed)
+                elif (
+                        embed.title is not None and (
+                                "anti-bot" in embed.title.lower() or
+                                "code" in embed.description.lower() or
+                                "verify" in embed.description.lower())
+                ):
+                    await self._anti_bot_resolve(embed, interaction_message)
+
+        except Exception as e:
+            logger.error(f"Error in check interaction: {e}")
+
+    async def _worker_check(self, embed: Embed):
+        total_fish = re.search(r"total of \*\*(\d+)\*\* fish", embed.description)
+        if not total_fish:
+            logger.warning("Got nothing from worker fish")
+            return
+
+        self.bot.telegram_notif.send_message(f"```Markdown\n# Worker fish notification\n\n- You got: {total_fish.group(1)} Fish\n\n> Time: {datetime.now().strftime("%I:%M:%S %p")}\n```")
+
+    async def _anti_bot_resolve(self, embed: Embed, message: Message):
+        """Anti bot message example:
+        Code: **D8fQ**\n\nPlease use **/verify ``D8fQ``** to continue playing."""
+        embed_dict = json.dumps(embed.to_dict(), indent=4)
+        notif = self.bot.telegram_notif.send_message(f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```")
+        code_search = re.search(r"Code: \*\*(\w+)\*\*", embed.description)
+        if code_search:
+            code = code_search.group(1)
+            self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
+                                                 f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\nFound Code: `{code}`")
+        else:
+            await message.forward(self.bot.owner)
 
     @commands.command(name="antibot checker", aliases=["ac"])
     async def antibot_checker(self, ctx: commands.Context):

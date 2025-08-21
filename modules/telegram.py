@@ -12,12 +12,12 @@ class Telegram:
         self.message_id = None
         self.base_url = f"https://api.telegram.org/bot{self.token}"
 
-    def send_message(self, message: str):
+    def send_message(self, message: str) -> dict | None:
         url = f"{self.base_url}/sendMessage"
         payload = {
             "chat_id": self.chat_id,
             "text": message,
-            "parse_mode": "Markdown"
+            "parse_mode": "markdown",
         }
 
         try:
@@ -34,7 +34,7 @@ class Telegram:
             "chat_id": self.chat_id,
             "message_id": message_id,
             "text": new_message,
-            "parse_mode": "Markdown"
+            "parse_mode": "markdown"
         }
 
         try:
