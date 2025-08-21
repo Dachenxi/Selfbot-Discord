@@ -17,6 +17,7 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
         self.database = database_conn
         self.telegram_notif = telegram_notif
+        self.owner = None
 
     async def parse(self, message: discord.Message):
         if not message.guild:
@@ -62,6 +63,7 @@ class Bot(commands.Bot):
                                             one=True)
         if setting:
             self.command_prefix = setting["prefix"]
+            self.owner = self.get_user(setting["owner_id"])
         else:
             logger.warning(f"Settings for user {self.user.display_name} not found in database, asking the user to input.")
             ask_owner_id = int(input("Please enter your Discord user ID to set as owner/main account: "))

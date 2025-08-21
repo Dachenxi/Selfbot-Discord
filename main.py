@@ -25,7 +25,7 @@ async def run_bot():
         await bot.close()
         await asyncio.sleep(5)
 
-async def exception_handler(loop, context):
+def exception_handler(loop, context):
     exception = context.get("exception")
     if isinstance(exception, (asyncio.CancelledError, KeyboardInterrupt)) or 'KeyboardInterrupt' in str(context):
         logger.warning("The program is stopped by the user, the program will stop the bot.")

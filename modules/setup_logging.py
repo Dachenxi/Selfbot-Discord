@@ -25,7 +25,7 @@ def setup_logging():
     # Console Handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] %(message)s",
+        "[%(asctime)s] %(name)s [%(levelname)s]: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     ))
 
