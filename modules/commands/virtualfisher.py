@@ -268,10 +268,8 @@ class VirtualFisher(commands.Cog):
 
         self.data["clan"] = clan_match.group(1) if clan_match else ""
         self.data["biome"] = biome_match.group(1) if biome_match else ""
-        if gold_fish_match:
-            self.data["gold_fish"] += int(gold_fish_match.group(1).replace(",", ""))
-        if emerald_fish_match:
-            self.data["emerald_fish"] += int(emerald_fish_match.group(1).replace(",", ""))
+        self.data["gold_fish"] += int(gold_fish_match.group(1).replace(",", "") if gold_fish_match else self.data["gold_fish"])
+        self.data["emerald_fish"] += int(emerald_fish_match.group(1).replace(",", "") if emerald_fish_match else self.data["emerald_fish"])
 
         notif = {
             "title": "Virtual Fisher Data Update",
