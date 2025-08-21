@@ -1,3 +1,4 @@
+import datetime
 import logging
 import random
 import modules
@@ -59,8 +60,12 @@ class VirtualFisher(commands.Cog):
                                                 (self.data["gold_fish"], self.bot.user.id))
                 delay = await self._check_interaction(interaction)
                 await asyncio.sleep(delay)
+
+        except discord.ConnectionClosed:
+            logger.warning("It seems the connection was closed, restarting worker tasks in 5 to 10 minutes.")
+            await asyncio.sleep(random.randint(300, 600))
         except discord.InvalidData:
-            logger.error("Invalid data received, restart in 5 to 10 minutes.")
+            logger.error("Invalid data received, restarting in 5 to 10 minutes.")
             await asyncio.sleep(random.randint(300, 600))
 
     async def _check_interaction(self, interaction: Interaction):
@@ -102,10 +107,38 @@ class VirtualFisher(commands.Cog):
                 ):
                     logger.info("Crate message detected")
                     await self._crate(embed)
-                    return None
+
+                if (
+                    embed.description is not None
+                    and ("$" in embed.description.lower() or
+                         "sold" in embed.description.lower())
+                ):
+                    await self._money(embed)
 
         except Exception as e:
             logger.error(f"Error in check interaction: {e}")
+
+    async def _money(self, embed: Embed):
+        notif = {
+            "title": "Money Notification",
+            "balance": 0,
+            "get_money": 0,
+            "total_balance": self.data["balance"],
+            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        money_search = re.search(r"\*\*?\$([\d,]+)\*\*?", embed.description)
+        if money_search is not None:
+            money = int(money_search.group(1).replace(",", ""))
+            notif["balance"] = self.data["balance"]
+            notif["get_money"] = money
+            notif["total_balance"] += money
+            self.data["balance"] = notif["total_balance"]
+
+            await self.bot.database.execute("UPDATE virtualfisher SET balance = %s WHERE user_id = %s",
+                                            (self.data["balance"], self.bot.user.id))
+            self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif, indent=4)}\n```")
+        else:
+            logger.warning("Money embed is detected but no money found in description")
 
     async def _worker_hired(self, embed: Embed):
         search = re.search(r"the next \*\*(\d+)\*\* minutes", embed.description)
@@ -114,7 +147,8 @@ class VirtualFisher(commands.Cog):
             text = {
                 "title": "Worker Hired",
                 "description": f"Worker hired for the next {delay} minutes",
-                "delay": delay * 60
+                "delay": delay * 60,
+                "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             self.bot.telegram_notif.send_message(f"```json\n{json.dumps(text, indent=4)}\n```")
             return delay * 60  # Convert minutes to seconds
@@ -127,24 +161,42 @@ class VirtualFisher(commands.Cog):
         if total_fish is None:
             logger.warning("Got nothing from worker fish")
             return
-        self.bot.telegram_notif.send_message(f"👷‍♂️ **Worker Fish Notification** 🐟\n\n**Fish**\n{total_fish.group(1)}")
+        notif = {
+            "title": "Worker Fish Notification",
+            "total_fish": int(total_fish.group(1)),
+            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif, indent=4)}\n```")
 
     async def _anti_bot_resolve(self, embed: Embed, message: Message):
         """Anti bot message example:
         Code: **D8fQ**\n\nPlease use **/verify ``D8fQ``** to continue playing."""
-        embed_dict = json.dumps(embed.to_dict(), indent=4)
-        notif = self.bot.telegram_notif.send_message(f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```")
+        notif_message = {
+            "title": "Anti-Bot Message Detected",
+            "code": "None",
+            "embed": json.dumps(embed.to_dict(), indent=4),
+            "isimage": {
+                "status": "No",
+                "message": "No image detected in embed"
+            },
+            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        notif = self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif_message, indent=4)}\n```")
         code_search = re.search(r"Code: \*\*(\w+)\*\*", embed.description)
         if code_search:
             code = code_search.group(1)
             self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
-                                                 f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\nFound Code: `{code}`")
+                                                 f"```json\n{json.dumps(notif_message, indent=4)}\n```")
             await self.verify_command.__call__(self.channel, answer=code)
             await self.fisher_tasks.start()
 
         else:
+            notif_message["isimage"]["status"] = "Yes"
+            notif_message["isimage"]["message"] = "Image is detected, forward message to owner for manual solve"
+
             self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
-                                                 f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\n\nIt seems the anti bot is an image. Sending to Owner for manual solve")
+                                                 f"```json\n{json.dumps(notif_message, indent=4)}\n```")
             self.fisher_tasks.stop()
             await message.forward(self.bot.owner)
 
@@ -251,6 +303,7 @@ class VirtualFisher(commands.Cog):
             return
 
         # Regex pattern
+        money_pattern = r"Balance: \*\*?\$([\d,]+)\*\*?"
         clan_patten = r"Clan: \*\*(\w+)\*\*"
         biome_pattern = r"Current biome: <:\w+:\d+> \*\*(\w+)\*\*"
         gold_fish_pattern = r"\*\*([\d,]+)\*\* <:\w+:\d+> Gold Fish"
@@ -261,15 +314,18 @@ class VirtualFisher(commands.Cog):
             return
 
         # Extracting data using regex
+        money_match = re.search(money_pattern, reply_message.embeds[0].description)
         clan_match = re.search(clan_patten, reply_message.embeds[0].description)
         biome_match = re.search(biome_pattern, reply_message.embeds[0].description)
         gold_fish_match = re.search(gold_fish_pattern, reply_message.embeds[0].description)
         emerald_fish_match = re.search(emerald_fish_pattern, reply_message.embeds[0].description)
 
+        self.data["balance"] = int(money_match.group(1).replace(",", "") if money_match else 0)
         self.data["clan"] = clan_match.group(1) if clan_match else ""
         self.data["biome"] = biome_match.group(1) if biome_match else ""
         self.data["gold_fish"] = int(gold_fish_match.group(1).replace(",", "") if gold_fish_match else self.data["gold_fish"])
         self.data["emerald_fish"] = int(emerald_fish_match.group(1).replace(",", "") if emerald_fish_match else self.data["emerald_fish"])
+
 
         notif = {
             "title": "Virtual Fisher Data Update",
@@ -278,17 +334,21 @@ class VirtualFisher(commands.Cog):
                 "biome": self.data["biome"],
                 "gold_fish": self.data["gold_fish"],
                 "emerald_fish": self.data["emerald_fish"],
-                "money": self.data["money"],
+                "money": self.data["balance"],
                 "trips": self.data["trips"]
-            }
+            },
+            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif, indent=4)}\n```")
-        await self.bot.database.execute("UPDATE virtualfisher SET clan = %s, biome = %s, gold_fish = %s, emerald_fish = %s WHERE user_id = %s",
-                                        (self.data["clan"],
-                                         self.data["biome"],
-                                         self.data["gold_fish"],
-                                         self.data["emerald_fish"],
-                                         self.bot.user.id))
+        await self.bot.database.execute("UPDATE virtualfisher SET balance = %s, clan = %s, biome = %s, gold_fish = %s, emerald_fish = %s WHERE user_id = %s",
+                                        (
+                                            self.data["balance"],
+                                            self.data["clan"],
+                                            self.data["biome"],
+                                            self.data["gold_fish"],
+                                            self.data["emerald_fish"],
+                                            self.bot.user.id
+                                        ))
 
     @commands.Cog.listener()
     async def on_message(self, message: Message):
