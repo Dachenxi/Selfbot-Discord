@@ -39,7 +39,7 @@ class VirtualFisher(commands.Cog):
                                             (self.data["trips"], self.bot.user.id))
             await asyncio.sleep(random.randint( 20, 120))
         except Exception as e:
-            logger.error("There is error in fisher tasks," + e)
+            logger.error(f"There is error in fisher tasks {e}")
             await asyncio.sleep(random.randint(20, 120))
 
     @tasks.loop(seconds=5)
@@ -63,7 +63,7 @@ class VirtualFisher(commands.Cog):
                 logger.info("Not enough exotic fish to buy worker, stopping now")
                 self.worker_tasks.stop()
         except Exception as e:
-            logger.error("There is error in worker tasks," + e)
+            logger.error(f"There is error in worker tasks {e}")
             pass
 
     async def _check_interaction(self, interaction: Interaction):
