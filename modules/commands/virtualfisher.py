@@ -5,7 +5,6 @@ import modules
 import asyncio
 import re
 import json
-import discord
 from discord.ext import commands, tasks
 from discord import TextChannel, SlashCommand, Interaction, Message, Embed
 
@@ -38,10 +37,10 @@ class VirtualFisher(commands.Cog):
 
             await self.bot.database.execute("UPDATE virtualfisher SET trips = %s WHERE user_id = %s",
                                             (self.data["trips"], self.bot.user.id))
-            await asyncio.sleep(random.randint(300, 600))
-        except discord.InvalidData:
-            logger.error("Invalid data received, stopping fisher tasks.")
-            await asyncio.sleep(random.randint(300, 600))
+            await asyncio.sleep(random.randint( 20, 120))
+        except Exception as e:
+            logger.error("There is error in fisher tasks," + e)
+            await asyncio.sleep(random.randint(20, 120))
 
     @tasks.loop(seconds=5)
     async def worker_tasks(self):
@@ -63,13 +62,9 @@ class VirtualFisher(commands.Cog):
             else:
                 logger.info("Not enough exotic fish to buy worker, stopping now")
                 self.worker_tasks.stop()
-
-        except discord.ConnectionClosed:
-            logger.warning("It seems the connection was closed, restarting worker tasks in 5 to 10 minutes.")
-            await asyncio.sleep(random.randint(300, 600))
-        except discord.InvalidData:
-            logger.error("Invalid data received, restarting in 5 to 10 minutes.")
-            await asyncio.sleep(random.randint(300, 600))
+        except Exception as e:
+            logger.error("There is error in worker tasks," + e)
+            pass
 
     async def _check_interaction(self, interaction: Interaction):
         try:
@@ -85,7 +80,7 @@ class VirtualFisher(commands.Cog):
             for embed in interaction_message.embeds:
                 if (
                         embed.description is not None
-                        and "your worker" in embed.description.lower()
+                        and "working" in embed.description.lower()
                 ):
                     await self._worker_check(embed)
                 if (
@@ -102,7 +97,9 @@ class VirtualFisher(commands.Cog):
                 ):
                     logger.info("Hired worker message detected")
                     delay = await self._worker_hired(embed)
-                    return delay
+                    if delay is not None:
+                        return delay
+                    return 1900  # Default delay if no delay found
                 if (
                     embed.description is not None
                     and ("emerald" in embed.description.lower() or
