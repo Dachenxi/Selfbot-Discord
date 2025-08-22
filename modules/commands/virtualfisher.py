@@ -46,20 +46,23 @@ class VirtualFisher(commands.Cog):
     @tasks.loop(seconds=5)
     async def worker_tasks(self):
         try:
-            if self.data["emerald_fish"] > 8:
+            if self.data["emerald_fish"] >= 8:
                 interaction = await self.buy_command.__call__(self.channel, item="Auto30m")
                 self.data["emerald_fish"] -= 8
                 await self.bot.database.execute("UPDATE virtualfisher SET emerald_fish = %s WHERE user_id = %s",
                                                 (self.data["emerald_fish"], self.bot.user.id))
                 delay = await self._check_interaction(interaction)
                 await asyncio.sleep(delay)
-            elif self.data["gold_fish"] > 8:
+            elif self.data["gold_fish"] >= 8:
                 interaction = await self.buy_command.__call__(self.channel, item="Auto10m")
                 self.data["gold_fish"] -= 8
                 await self.bot.database.execute("UPDATE virtualfisher SET gold_fish = %s WHERE user_id = %s",
                                                 (self.data["gold_fish"], self.bot.user.id))
                 delay = await self._check_interaction(interaction)
                 await asyncio.sleep(delay)
+            else:
+                logger.info("Not enough exotic fish to buy worker, stopping now")
+                self.worker_tasks.stop()
 
         except discord.ConnectionClosed:
             logger.warning("It seems the connection was closed, restarting worker tasks in 5 to 10 minutes.")
@@ -82,7 +85,7 @@ class VirtualFisher(commands.Cog):
             for embed in interaction_message.embeds:
                 if (
                         embed.description is not None
-                        and "worker" in embed.description.lower()
+                        and "your worker" in embed.description.lower()
                 ):
                     await self._worker_check(embed)
                 if (
@@ -102,11 +105,11 @@ class VirtualFisher(commands.Cog):
                     return delay
                 if (
                     embed.description is not None
-                    and ("crate" in embed.description.lower()
-                         or "chest" in embed.description.lower())
+                    and ("emerald" in embed.description.lower() or
+                         "gold" in embed.description.lower())
                 ):
-                    logger.info("Crate message detected")
-                    await self._crate(embed)
+                    logger.info("Exotic fish message detected")
+                    await self._exotic_fish(embed)
 
                 if (
                     embed.description is not None
@@ -121,6 +124,7 @@ class VirtualFisher(commands.Cog):
     async def _money(self, embed: Embed):
         notif = {
             "title": "Money Notification",
+            "username": self.bot.user.name,
             "balance": 0,
             "get_money": 0,
             "total_balance": self.data["balance"],
@@ -146,6 +150,7 @@ class VirtualFisher(commands.Cog):
             delay = int(search.group(1))
             text = {
                 "title": "Worker Hired",
+                "username": self.bot.user.name,
                 "description": f"Worker hired for the next {delay} minutes",
                 "delay": delay * 60,
                 "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -158,21 +163,24 @@ class VirtualFisher(commands.Cog):
 
     async def _worker_check(self, embed: Embed):
         total_fish = re.search(r"total of \*\*(\d+)\*\* fish", embed.description)
-        if total_fish is None:
+        if total_fish:
+            notif = {
+                "title": "Fish from Worker Notification",
+                "username": self.bot.user.name,
+                "total_fish": int(total_fish.group(1)),
+                "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif, indent=4)}\n```")
+        else:
             logger.warning("Got nothing from worker fish")
             return
-        notif = {
-            "title": "Worker Fish Notification",
-            "total_fish": int(total_fish.group(1)),
-            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif, indent=4)}\n```")
 
     async def _anti_bot_resolve(self, embed: Embed, message: Message):
         """Anti bot message example:
         Code: **D8fQ**\n\nPlease use **/verify ``D8fQ``** to continue playing."""
         notif_message = {
             "title": "Anti-Bot Message Detected",
+            "username": self.bot.user.name,
             "code": "None",
             "embed": json.dumps(embed.to_dict(), indent=4),
             "isimage": {
@@ -219,7 +227,7 @@ class VirtualFisher(commands.Cog):
                 if self.fish_command and self.sell_command and self.verify_command and self.buy_command:
                     break
 
-    async def _crate(self, embed: Embed):
+    async def _exotic_fish(self, embed: Embed):
         emerald_fish = re.search(r"You got (\d+) Emerald Fish", embed.description)
         gold_fish = re.search(r"You got (\d+) Gold Fish", embed.description)
 
@@ -228,26 +236,28 @@ class VirtualFisher(commands.Cog):
             await self.bot.database.execute("UPDATE virtualfisher SET emerald_fish = %s WHERE user_id = %s",
                                             (self.data["emerald_fish"], self.bot.user.id))
             notif = {"title": "You Found Crate",
+                        "username": self.bot.user.name,
                      "containing":
                          {"emerald_fish": emerald_fish.group(1)},
                      "exotic_fish":
                          {"emerald_fish": self.data["emerald_fish"],
                           "gold_fish": self.data["gold_fish"]}
                      }
-            self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif)}\n```")
+            self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif, indent=4)}\n```")
 
         if gold_fish:
             self.data["gold_fish"] += int(gold_fish.group(1))
             await self.bot.database.execute("UPDATE virtualfisher SET gold_fish = %s WHERE user_id = %s",
                                             (self.data["gold_fish"], self.bot.user.id))
             notif = {"title": "You Found Crate",
+                     "username": self.bot.user.name,
                      "containing":
                          {"gold_fish": gold_fish.group(1)},
                      "exotic_fish":
                          {"emerald_fish": self.data["emerald_fish"],
                           "gold_fish": self.data["gold_fish"]}
                      }
-            self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif)}\n```")
+            self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif, indent=4)}\n```")
 
     @commands.command(name="fisher")
     async def fisher(self, ctx: commands.Context):
