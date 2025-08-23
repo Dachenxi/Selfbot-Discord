@@ -8,6 +8,7 @@ from database.database import db
 logger = setup_logging()
 load_dotenv(".env")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 async def run_bot():
     try:

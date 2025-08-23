@@ -137,7 +137,6 @@ class VirtualFisher(commands.Cog):
 
             await self.bot.database.execute("UPDATE virtualfisher SET balance = %s WHERE user_id = %s",
                                             (self.data["balance"], self.bot.user.id))
-            self.bot.telegram_notif.send_message(f"```json\n{json.dumps(notif, indent=4)}\n```")
         else:
             logger.warning("Money embed is detected but no money found in description")
 
