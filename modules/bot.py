@@ -1,8 +1,11 @@
 import logging
+import os
+
 import discord
 from discord.ext import commands
 from database.database import db, Database
 from .telegram import notif, Telegram
+from .embed import EmbedManager
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +20,11 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
         self.database = database_conn
         self.telegram_notif = telegram_notif
+        self.embed = None
+        self.message_embed = None
+        self.data_embed = {}
         self.owner = None
+
 
     async def parse(self, message: discord.Message):
         if not message.guild:
@@ -70,6 +77,27 @@ class Bot(commands.Bot):
             ask_server_id = int(input("Please enter your Main server ID to set as server ID\nYou can change it later: "))
             await self.database.execute("INSERT INTO settings (user_id, owner_id, server_id) VALUES (%s, %s, %s)", (self.user.id, ask_owner_id, ask_server_id))
             logger.warning(f"Prefix not found in settings, using default {self.command_prefix}, you can change it using {self.command_prefix}prefix <new_prefix> command.")
+
+        logger.info("Setting up embed")
+        self.embed = EmbedManager(self, os.getenv("WEBHOOK_URL"))
+        self.data_embed = {
+            "author": {
+                "name": self.user.name,
+                "icon_url": self.user.display_avatar.url
+            },
+            "title": "Bot is now online!",
+            "description": f"Bot is now online and ready to use!\nUse `{self.command_prefix}help` to see the list of commands.",
+            "fields": [
+                {
+                    "name": "Virtual Fisher",
+                    "value": ""
+                }
+            ]
+        }
+        self.message_embed = await self.embed.create_embed(self.data_embed)
+
+
+
 
 
 bot = Bot(
