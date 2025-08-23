@@ -59,7 +59,7 @@ class EmbedManager:
                 icon_url=footer_data.get('icon_url')
             )
 
-        embed.set_timestamp(datetime.now(timezone.utc))
+        embed.set_timestamp(str(datetime.now(timezone.utc)))
         return embed
 
     async def _fetch_message_from_response(self, response, message_id: str = None) -> Optional[discord.Message]:
