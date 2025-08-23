@@ -59,7 +59,7 @@ class EmbedManager:
                 icon_url=footer_data.get('icon_url')
             )
 
-        embed.set_timestamp(datetime.now(timezone.utc))
+        embed.set_timestamp(datetime.now(timezone.utc).timestamp())
         return embed
 
     async def _fetch_message_from_response(self, response, message_id: str = None) -> Optional[discord.Message]:
@@ -96,7 +96,6 @@ class EmbedManager:
         self.webhook.remove_embeds()
         self.webhook.add_embed(embed)
         response = self.webhook.execute()
-        print(response)
         if response.status_code == 200:
             message_data = json.loads(response.text)
             self.stored_message_id = message_data['id']
