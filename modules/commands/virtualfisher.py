@@ -51,14 +51,20 @@ class VirtualFisher(commands.Cog):
                 await self.bot.database.execute("UPDATE virtualfisher SET emerald_fish = %s WHERE user_id = %s",
                                                 (self.data["emerald_fish"], self.bot.user.id))
                 delay = await self._check_interaction(interaction)
-                await asyncio.sleep(delay)
+                if delay:
+                    await asyncio.sleep(delay)
+                else:
+                    await asyncio.sleep(1900)
             elif self.data["gold_fish"] >= 8:
                 interaction = await self.buy_command.__call__(self.channel, item="Auto10m")
                 self.data["gold_fish"] -= 8
                 await self.bot.database.execute("UPDATE virtualfisher SET gold_fish = %s WHERE user_id = %s",
                                                 (self.data["gold_fish"], self.bot.user.id))
                 delay = await self._check_interaction(interaction)
-                await asyncio.sleep(delay)
+                if delay:
+                    await asyncio.sleep(delay)
+                else:
+                    await asyncio.sleep(1900)
             else:
                 logger.info("Not enough exotic fish to buy worker, stopping now")
                 self.worker_tasks.stop()
@@ -366,8 +372,8 @@ class VirtualFisher(commands.Cog):
             if command_name == "verify":
                 code = parts[1] if len(parts) > 1 else ""
                 await self.verify_command.__call__(self.channel, answer=code)
-                await self.fisher_tasks.start()
                 await message.reply("Verification command sent. Fisher task will resume.")
+                await self.fisher_tasks.start()
             else:
                 return
 

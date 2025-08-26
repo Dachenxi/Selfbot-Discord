@@ -1,7 +1,7 @@
 import os
-
 import requests
 import dotenv
+from typing import Optional
 
 class Telegram:
     def __init__(self,
@@ -12,13 +12,21 @@ class Telegram:
         self.message_id = None
         self.base_url = f"https://api.telegram.org/bot{self.token}"
 
-    def send_message(self, message: str) -> dict | None:
+    def send_message(self, message: str, message_thread_id: Optional[int] = None) -> dict | None:
         url = f"{self.base_url}/sendMessage"
-        payload = {
-            "chat_id": self.chat_id,
-            "text": message,
-            "parse_mode": "markdown",
-        }
+        if message_thread_id:
+            payload = {
+                "chat_id": self.chat_id,
+                "text": message,
+                "parse_mode": "markdown",
+                "message_thread_id": message_thread_id
+            }
+        else:
+            payload = {
+                "chat_id": self.chat_id,
+                "text": message,
+                "parse_mode": "markdown"
+            }
 
         try:
             response = requests.post(url, json=payload)
@@ -28,14 +36,23 @@ class Telegram:
             print(f"Error sending message to Telegram: {e}")
             return None
 
-    def edit_message(self, message_id: int, new_message: str):
+    def edit_message(self, message_id: int, new_message: str, message_thread_id: Optional[int] = None) -> dict | None:
         url = f"{self.base_url}/editMessageText"
-        payload = {
-            "chat_id": self.chat_id,
-            "message_id": message_id,
-            "text": new_message,
-            "parse_mode": "markdown"
-        }
+        if message_thread_id:
+            payload = {
+                "chat_id": self.chat_id,
+                "message_id": message_id,
+                "text": new_message,
+                "parse_mode": "markdown",
+                "message_thread_id": message_thread_id
+            }
+        else:
+            payload = {
+                "chat_id": self.chat_id,
+                "message_id": message_id,
+                "text": new_message,
+                "parse_mode": "markdown"
+            }
 
         try:
             response = requests.post(url, json=payload)

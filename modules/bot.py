@@ -23,7 +23,8 @@ class Bot(commands.Bot):
         self.embed = None
         self.message_embed = None
         self.data_embed = {}
-        self.owner = None
+        self.owner: discord.User | None = None
+        self.guild_id = 0
 
 
     async def parse(self, message: discord.Message):
@@ -71,6 +72,7 @@ class Bot(commands.Bot):
         if setting:
             self.command_prefix = setting["prefix"]
             self.owner = self.get_user(setting["owner_id"])
+            self.guild_id = setting["server_id"]
         else:
             logger.warning(f"Settings for user {self.user.display_name} not found in database, asking the user to input.")
             ask_owner_id = int(input("Please enter your Discord user ID to set as owner/main account: "))
@@ -85,17 +87,44 @@ class Bot(commands.Bot):
                 "name": self.user.name,
                 "icon_url": self.user.display_avatar.url
             },
-            "title": "Bot is now online!",
+            "title": "Selfbot is Ready",
             "description": f"Bot is now online and ready to use!\nUse `{self.command_prefix}help` to see the list of commands.",
             "fields": [
                 {
-                    "name": "Virtual Fisher",
-                    "value": ""
+                    "name": "> **Virtual Fisher**",
+                    "value": "**Fisher tasks**: False\n**Worker tasks**: False",
+                    "inline": False
+                },
+                {
+                    "name": "> **Logs**",
+                    "value": "No logs yet.",
+                    "inline": False
+                },
+                {
+                    "name": f"> **Auto Command** | **Prefix**: `{self.command_prefix}`",
+                    "value": f"`{self.command_prefix}fisher` - Start fisher tasks"
+                             f"\n`{self.command_prefix}worker` - Start worker tasks"
+                             f"\n`{self.command_prefix}stopfisher` - Stop all tasks"
+                             f"\n`{self.command_prefix}stopworker` - Show current status",
+                    "inline": True
+                },
+                {
+                    "name": f"> **Other Commands** | **Prefix**: `{self.command_prefix}`",
+                    "value": f"`{self.command_prefix}prefix <new_prefix>` - Change command prefix"
+                             f"\n`{self.command_prefix}status` - Show current status",
+                    "inline": True
                 }
             ]
         }
         self.message_embed = await self.embed.create_embed(self.data_embed)
 
+    async def deactivate(self):
+        if self.message_embed:
+            try:
+                await self.message_embed.delete()
+            except Exception as e:
+                logger.error(f"Error deleting message embed: {e}")
+        await self.close()
 
 
 

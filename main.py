@@ -23,7 +23,11 @@ async def run_bot():
         await bot.start(token=DISCORD_TOKEN, reconnect=True)
     except discord.ClientException as e:
         logger.error(e)
-        await bot.close()
+        await bot.deactivate()
+        await asyncio.sleep(5)
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        await bot.deactivate()
         await asyncio.sleep(5)
 
 def exception_handler(loop, context):

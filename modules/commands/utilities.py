@@ -123,9 +123,15 @@ class Utilities(commands.Cog):
         for embed in fetch_message.embeds:
             scrapped_data["embeds"].append(embed.to_dict())
 
-        # default=str is a safeguard if something else non-serializable sneaks in
-        scrapped_data = json.dumps(scrapped_data, indent=2, ensure_ascii=False, default=str)
-        await ctx.channel.send(f"```json\n{scrapped_data}\n```")
+        full_json_string = json.dumps(scrapped_data, indent=2, ensure_ascii=False, default=str)
+        max_content = 1980
+
+        if len(full_json_string) <= max_content:
+            await ctx.channel.send(f"```json\n{full_json_string}\n```")
+        else:
+            for i in range(0, len(full_json_string), max_content):
+                chunk = full_json_string[i:i + max_content]
+                await ctx.channel.send(f"```json\n{chunk}\n```")
 
     @commands.command(name="scrapvf")
     async def scrapvf(self, ctx: commands.Context):
