@@ -29,18 +29,15 @@ async def _get_delay(message: discord.Message) -> int:
                 break
     return 5
 
-
 class IdleMiner(commands.Cog):
     def __init__(self, bot: modules.Bot):
         self.bot = bot
         self.message_id: int = 0
 
-
     @tasks.loop(seconds=2)
     async def miner_tasks(self, channel: discord.TextChannel):
         try:
             message = await channel.fetch_message(self.message_id)
-
             if message:
                 for row in message.components:
                     for children in row.children:
@@ -48,17 +45,18 @@ class IdleMiner(commands.Cog):
                             if not children.disabled:
                                 if not ("Boosters" in children.custom_id or "Farm" in children.custom_id or "Pets" in children.custom_id):
                                     await children.click()
-                                    print(f"Clicked button with label: {children.label}")
-                                    await asyncio.sleep(1)
 
                 delay = await _get_delay(message)
                 print(delay)
                 await asyncio.sleep(delay)
             else:
-                self.miner_tasks.stop()
+                self.miner_tasks.cancel()
                 logger.info("No buttons found, stopping miner task.")
         except Exception as e:
-            logger.error(f"Error in miner task: {e}")
+            if "COMPONENT_VALIDATION_FAILED" in str(e):
+                pass
+            else:
+                logger.error(f"Error in miner task: {e}")
 
     @commands.command(name="cek_component", aliases=["cc"])
     async def cek_component(self, ctx: commands.Context):
@@ -70,22 +68,17 @@ class IdleMiner(commands.Cog):
 
     @commands.command(name="miner", aliases=["m"])
     async def miner(self, ctx: commands.Context):
-
         slash_command = await ctx.channel.application_commands()
         for command in slash_command:
             if command.id == 1018127992590962708:
                 play_command = command
                 break
-
         if not play_command:
             await ctx.send("Could not find the play command.")
             return
-
         interaction = await play_command.__call__(ctx.channel)
         self.message_id = interaction.message.id
         await self.miner_tasks.start(ctx.channel)
-
-
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

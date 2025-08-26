@@ -33,11 +33,11 @@ class OWO(commands.Cog):
         self.channel = ctx.channel
         if self.hunt_tasks.is_running():
             await ctx.channel.send("Hunt owo is already running.")
-            self.hunt_owo.stop()
+            self.hunt_tasks.stop()
             return
         else:
             await ctx.channel.send("Hunt owo starting...")
-            self.hunt_owo.start()
+            self.hunt_tasks.start()
 
     @commands.command(name="battle_owo", aliases=["bo"])
     async def battle_owo(self, ctx: commands.Context):
@@ -52,10 +52,23 @@ class OWO(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.guild.id is None and message.author.id == 408785106942164992:
-            self.hunt_tasks.stop()
-            self.battle_tasks.stop()
-            logger.info("Stopping hunt and battle tasks because DM received from OWO bot.")
+        if not message.guild:
+            if message.author.id == 408785106942164992:
+                self.hunt_tasks.stop()
+                self.battle_tasks.stop()
+                logger.info("Stopping hunt and battle tasks because DM received from OWO bot.")
+                await message.forward(self.bot.owner.dm_channel)
+                await self.bot.owner.send("Please reply with code `!owo <code>` to send the code to OWO bot.")
+            elif message.author.id == self.bot.owner.id and message.content.startswith(self.bot.command_prefix):
+                parts = message.content[1:].split()
+                command_name = parts[0]
+                if command_name == "owo":
+                    code = parts[1]
+                    bot = self.bot.get_user(408785106942164992)
+                    await bot.send(f"{code}")
+
+
+
         else:
             if message.embeds and message.author.id == 408785106942164992 and message.guild.id == self.bot.guild_id:
                 if self.bot.user.global_name in message.embeds[0].author.name:
