@@ -43,11 +43,11 @@ class IdleMiner(commands.Cog):
                     for children in row.children:
                         if isinstance(children, discord.Button):
                             if not children.disabled:
-                                if not ("Boosters" in children.custom_id or "Farm" in children.custom_id or "Pets" in children.custom_id):
+                                if not (children.custom_id == "playBoosters_686434271837159464" or
+                                        children.custom_id == "playPets_686434271837159464" or
+                                        children.custom_id == "playFarm_686434271837159464"):
                                     await children.click()
-
                 delay = await _get_delay(message)
-                print(delay)
                 await asyncio.sleep(delay)
             else:
                 self.miner_tasks.cancel()
@@ -78,7 +78,11 @@ class IdleMiner(commands.Cog):
             return
         interaction = await play_command.__call__(ctx.channel)
         self.message_id = interaction.message.id
-        await self.miner_tasks.start(ctx.channel)
+        if self.miner_tasks.is_running():
+            self.miner_tasks.stop()
+            await ctx.channel.send("Miner tasks stopped.")
+        else:
+            await self.miner_tasks.start(ctx.channel)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
