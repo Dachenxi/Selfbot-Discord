@@ -43,9 +43,9 @@ class IdleMiner(commands.Cog):
                     for children in row.children:
                         if isinstance(children, discord.Button):
                             if not children.disabled:
-                                if not (children.custom_id == "playBoosters_686434271837159464" or
-                                        children.custom_id == "playPets_686434271837159464" or
-                                        children.custom_id == "playFarm_686434271837159464"):
+                                if not ("playBoosters" in children.custom_id or
+                                        "playPets" in children.custom_id or
+                                        "playFarm" in children.custom_id):
                                     await children.click()
                 delay = await _get_delay(message)
                 await asyncio.sleep(delay)
