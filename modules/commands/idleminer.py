@@ -33,11 +33,12 @@ class IdleMiner(commands.Cog):
     def __init__(self, bot: modules.Bot):
         self.bot = bot
         self.message_id: int = 0
+        self.channel: discord.TextChannel | None = None
 
     @tasks.loop(seconds=2)
-    async def miner_tasks(self, channel: discord.TextChannel):
+    async def miner_tasks(self):
         try:
-            message = await channel.fetch_message(self.message_id)
+            message = await self.channel.fetch_message(self.message_id)
             if message:
                 for row in message.components:
                     for children in row.children:
@@ -68,6 +69,7 @@ class IdleMiner(commands.Cog):
 
     @commands.command(name="miner", aliases=["m"])
     async def miner(self, ctx: commands.Context):
+        self.channel = ctx.channel
         slash_command = await ctx.channel.application_commands()
         for command in slash_command:
             if command.id == 1018127992590962708:
@@ -82,17 +84,30 @@ class IdleMiner(commands.Cog):
             self.miner_tasks.stop()
             await ctx.channel.send("Miner tasks stopped.")
         else:
-            await self.miner_tasks.start(ctx.channel)
+            await self.miner_tasks.start()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.guild.id:
-            if "verification" in message.content and message.author.id == 518759221098053634:
+        if message.guild:
+            match = re.search(r"<@(/d+)>", message.content)
+            if "verification" in message.content and match.group(1) == self.bot.user.id and message.author.id == 518759221098053634:
                 self.miner_tasks.stop()
         else:
             if message.author.id == 518759221098053634:
                 self.miner_tasks.stop()
                 await message.forward(self.bot.owner.dm_channel)
+                await self.bot.owner.send(f"Please respond with {self.bot.command_prefix}verifidleminer <code>")
+            elif message.author.id == self.bot.owner.id and message.content.startswith(self.bot.command_prefix):
+                parts = message.content[1:].split()
+                command_name = parts[0]
+                if command_name == "verifidleminer":
+                    code = parts[1] if len(parts) > 1 else ""
+                    await message.reply("Verification command sent. idle miner task will resume.")
+                    await self.miner_tasks.start()
+                    bot = self.bot.get_user(518759221098053634)
+                    await bot.send(code)
+
+
 
 async def setup(bot: modules.Bot):
     await bot.add_cog(IdleMiner(bot))
