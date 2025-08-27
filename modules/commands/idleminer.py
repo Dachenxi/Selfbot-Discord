@@ -1,3 +1,5 @@
+import random
+
 import discord
 import asyncio
 import modules
@@ -45,14 +47,22 @@ class IdleMiner(commands.Cog):
                                 if not ("playBoosters" in children.custom_id or
                                         "playPets" in children.custom_id or
                                         "playFarm" in children.custom_id):
-                                    await children.click()
+                                    if "sell" in children.custom_id:
+                                        for loop in range(5):
+                                            await children.click()
+                                            await asyncio.sleep(random.randint(3, 6))
+                                    else:
+                                        await children.click()
                 delay = await _get_delay(message)
                 await asyncio.sleep(delay)
             else:
                 self.miner_tasks.cancel()
                 logger.info("No buttons found, stopping miner task.")
+
         except Exception as e:
             if "COMPONENT_VALIDATION_FAILED" in str(e):
+                pass
+            elif "not receive" in str(e):
                 pass
             else:
                 logger.error(f"Error in miner task: {e}")
@@ -69,6 +79,7 @@ class IdleMiner(commands.Cog):
     async def miner(self, ctx: commands.Context):
         self.channel = ctx.channel
         slash_command = await ctx.channel.application_commands()
+        play_command = None
         for command in slash_command:
             if command.id == 1018127992590962708:
                 play_command = command
