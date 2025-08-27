@@ -1,5 +1,3 @@
-from typing import assert_never
-
 import discord
 import asyncio
 import modules
@@ -103,10 +101,11 @@ class IdleMiner(commands.Cog):
                 if command_name == "verifidleminer":
                     code = parts[1] if len(parts) > 1 else ""
                     await message.reply("Verification command sent. idle miner task will resume.")
-                    await self.miner_tasks.start()
                     bot = self.bot.get_user(518759221098053634)
                     await bot.send(code)
-
+                    if self.miner_tasks.is_running():
+                        self.miner_tasks.stop()
+                    await self.miner_tasks.start()
 
 
 async def setup(bot: modules.Bot):
