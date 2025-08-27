@@ -42,11 +42,15 @@ class IdleMiner(commands.Cog):
             if message:
                 for row in message.components:
                     for children in row.children:
-                        if isinstance(children, discord.Button):
-                            if not children.disabled:
-                                if not ("playBoosters" in children.custom_id or
+                        if (
+                                isinstance(children, discord.Button) and
+                                not children.disabled and
+                                not (
+                                        "playBoosters" in children.custom_id or
                                         "playPets" in children.custom_id or
-                                        "playFarm" in children.custom_id):
+                                        "playFarm" in children.custom_id
+                                )
+                        ):
                                     if "sell" in children.custom_id:
                                         for loop in range(5):
                                             await children.click()
