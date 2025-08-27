@@ -51,7 +51,7 @@ class IdleMiner(commands.Cog):
                                         "playFarm" in children.custom_id
                                 )
                         ):
-                                    if "sell" in children.custom_id:
+                                    if "playSell" in children.custom_id:
                                         for loop in range(5):
                                             await children.click()
                                             await asyncio.sleep(random.randint(3, 6))
