@@ -103,9 +103,13 @@ class IdleMiner(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.guild:
-            match = re.search(r"<@(/d+)>", message.content)
-            if "verification" in message.content and match and match.group(1) == self.bot.user.id and message.author.id == 518759221098053634:
-                self.miner_tasks.stop()
+            if (
+                    "verification" in message.content
+                    and message.author.id == self.idle_miner.id
+            ):
+                match = re.search(r"<@(/d+)>", message.content)
+                if match and match.group(1) == self.bot.user.id:
+                    self.miner_tasks.stop()
         else:
             if message.guild and message.guild.id == self.bot.guild_id:
                 if (
