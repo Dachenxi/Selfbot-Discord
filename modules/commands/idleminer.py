@@ -33,7 +33,7 @@ class IdleMiner(commands.Cog):
     def __init__(self, bot: modules.Bot):
         self.bot = bot
         self.message_id: int = 0
-        self.idle_miner = self.bot.get_user(518759221098053634)
+        self.idle_miner_id = 518759221098053634
         self.channel: discord.TextChannel | None = None
 
     @tasks.loop(seconds=2)
@@ -105,7 +105,7 @@ class IdleMiner(commands.Cog):
         if message.guild:
             if (
                     "verification" in message.content
-                    and message.author.id == self.idle_miner.id
+                    and message.author.id == self.idle_miner_id
             ):
                 match = re.search(r"<@(/d+)>", message.content)
                 if match and match.group(1) == self.bot.user.id:
@@ -114,14 +114,14 @@ class IdleMiner(commands.Cog):
             if message.guild and message.guild.id == self.bot.guild_id:
                 if (
                         "verification" in message.content
-                        and message.author.id == self.idle_miner.id
+                        and message.author.id == self.idle_miner_id
                 ):
                     match = re.search(r"<@(/d+)>", message.content)
                     if match and match.group(1) == self.bot.user.id:
                         self.miner_tasks.stop()
             else:
                 if (
-                        message.author.id == self.idle_miner.id
+                        message.author.id == self.idle_miner_id
                         and "code" in message.content.lower()
                 ):
                     self.miner_tasks.stop()
@@ -141,11 +141,12 @@ class IdleMiner(commands.Cog):
                     if command_name == "verifim":
                         code = parts[1] if len(parts) > 1 else ""
                         await message.reply("Verification command sent. idle miner task will resume.")
-                        await self.idle_miner.send(code)
+                        idle_miner_bot = self.bot.get_user(self.idle_miner_id)
+                        await idle_miner_bot.send(code)
                     else:
                         return
                 elif (
-                        message.author.id == self.idle_miner.id
+                        message.author.id == self.idle_miner_id
                         and "continue" in message.content.lower()
                 ):
                     if self.miner_tasks.is_running():
