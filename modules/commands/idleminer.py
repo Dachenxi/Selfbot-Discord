@@ -204,7 +204,7 @@ class IdleMiner(commands.Cog):
         logger.info(f"Get Channel for Idle Miner: {self.data['miner_channel_id']} and {self.data['farmer_channel_id']}")
         if not self.data['miner_channel_id'] or self.data['miner_channel_id'] == 0:
             self.data['miner_channel_id'] = int(input("Enter miner channel ID for Idle Miner: "))
-            await self.bot.database.execute("UPDATE idle_miner SET channel_id = %s WHERE user_id = %s",
+            await self.bot.database.execute("UPDATE idle_miner SET miner_channel_id = %s WHERE user_id = %s",
                                             (self.data['miner_channel_id'], self.bot.user.id))
         if not self.data['farmer_channel_id'] or self.data['farmer_channel_id'] == 0:
             self.data['farmer_channel_id'] = int(input("Enter farmer channel ID for Idle Miner Farmer: "))
