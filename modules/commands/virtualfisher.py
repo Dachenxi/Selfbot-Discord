@@ -8,12 +8,12 @@ import json
 from discord.ext import commands, tasks
 from discord import TextChannel, SlashCommand, Interaction, Message, Embed
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("Virtual Fisher COG")
 
 # noinspection PyTypeChecker
 class VirtualFisher(commands.Cog):
     def __init__(self, bot: modules.Bot) -> None:
-        self.data: dict = None
+        self.data: dict = {}
         self.bot = bot
         self.channel: TextChannel = None
         self.sell_command: SlashCommand = None

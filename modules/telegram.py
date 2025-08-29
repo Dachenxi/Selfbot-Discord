@@ -62,6 +62,29 @@ class Telegram:
             print(f"Error editing message in Telegram: {e}")
             return None
 
+    def send_file(self,
+                  file_path: str,
+                  message_thread_id: Optional[int] = 0,
+                  caption: str | None = None):
+        url = f"{self.base_url}/sendDocument"
+        base_payload = {
+            "chat_id": self.chat_id,
+            "message_thread_id": message_thread_id,
+            "parse_mode": "markdown"
+        }
+        if caption:
+            base_payload["caption"] = caption
+        try:
+            with open(file_path, "rb") as file:
+                files = {"document": file}
+                response = requests.post(url, data=base_payload, files=files)
+                response.raise_for_status()
+                return response.json()
+        except FileNotFoundError:
+            print(f"File not found: {file_path}")
+            return None
+
+
 dotenv.load_dotenv(".env")
 notif = Telegram(
     token=os.getenv("TELEGRAM_TOKEN"),

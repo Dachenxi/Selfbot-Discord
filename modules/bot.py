@@ -1,11 +1,12 @@
 import logging
 import os
-
 import discord
 from discord.ext import commands
 from database.database import db, Database
+from .setup_logging import log_timestamp
 from .telegram import notif, Telegram
 from .embed import EmbedManager
+from typing import Literal
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +21,8 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
         self.database = database_conn
         self.telegram_notif = telegram_notif
-        self.embed = None
-        self.message_embed = None
+        self.embed: EmbedManager | None = None
+        self.message_embed: discord.Message | None = None
         self.data_embed = {}
         self.owner: discord.User | None = None
         self.guild_id = 0
@@ -92,8 +93,13 @@ class Bot(commands.Bot):
             "fields": [
                 {
                     "name": "> **Virtual Fisher**",
-                    "value": "**Fisher tasks**: False\n**Worker tasks**: False",
-                    "inline": False
+                    "value": "**Fisher tasks**: 🔴Not Running\n**Worker tasks**: 🔴Not Running",
+                    "inline": True
+                },
+                {
+                    "name": "> **Idle Miner**",
+                    "value": "**Miner tasks**: 🔴Not Running\n**Farmer tasks**: 🔴Not Running",
+                    "inline": True
                 },
                 {
                     "name": "> **Logs**",
@@ -101,19 +107,25 @@ class Bot(commands.Bot):
                     "inline": False
                 },
                 {
-                    "name": f"> **Auto Command** | **Prefix**: `{self.command_prefix}`",
+                    "name": f"> **Virtual Fisher Command** | **Prefix**: `{self.command_prefix}`",
                     "value": f"`{self.command_prefix}fisher` - Start fisher tasks"
                              f"\n`{self.command_prefix}worker` - Start worker tasks"
                              f"\n`{self.command_prefix}stopfisher` - Stop all tasks"
                              f"\n`{self.command_prefix}stopworker` - Show current status",
-                    "inline": True
+                    "inline": False
                 },
                 {
                     "name": f"> **Other Commands** | **Prefix**: `{self.command_prefix}`",
                     "value": f"`{self.command_prefix}prefix <new_prefix>` - Change command prefix"
                              f"\n`{self.command_prefix}status` - Show current status",
-                    "inline": True
-                }
+                    "inline": False
+                },
+                {
+                    "name": f"> **Idle Miner Command** | **Prefix**: `{self.command_prefix}`",
+                    "value": f"`{self.command_prefix}miner` - Start/stop miner tasks"
+                             f"\n`{self.command_prefix}idleminerfarmer | imf` - Start/Stop farmer tasks",
+                    "inline": False
+                },
             ]
         }
         self.message_embed = await self.embed.create_embed(self.data_embed)
@@ -126,8 +138,27 @@ class Bot(commands.Bot):
                 logger.error(f"Error deleting message embed: {e}")
         await self.close()
 
+        self.telegram_notif.send_file(f"log/bot_{log_timestamp}.log",
+                                      72,
+                                      f"🔔Log File From Bot: {self.user.name}\n")
 
+    def tasks_update(self, field_category: str, task_name: str, status: Literal["🟢Running", "🔴Not Running"]):
+        for field in self.data_embed["fields"]:
+            if field_category in field["name"]:
+                lines = field["value"].split('\n')
+                new_lines = []
 
+                for line in lines:
+                    if line.startswith(f"**{task_name}**"):
+                        new_lines.append(f"**{task_name}**: {status}")
+                    else:
+                        new_lines.append(line)
+
+                field["value"] = "\n".join(new_lines)
+
+                break
+
+        return self.data_embed
 
 bot = Bot(
     command_prefix="!",
