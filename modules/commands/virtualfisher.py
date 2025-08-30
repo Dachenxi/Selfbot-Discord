@@ -8,7 +8,7 @@ import json
 from discord.ext import commands, tasks
 from discord import TextChannel, SlashCommand, Interaction, Message, Embed
 
-logger = logging.getLogger("Virtual Fisher COG")
+logger = logging.getLogger("Virtual Fisher Cog")
 
 # noinspection PyTypeChecker
 class VirtualFisher(commands.Cog):
@@ -377,10 +377,8 @@ class VirtualFisher(commands.Cog):
             else:
                 return
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        await asyncio.sleep(1)
-        logger.info("Setting up VirtualFisher Database")
+    async def virtual_fisher_setup(self):
+        logger.info("Setting up VirtualFisher")
         data = await self.bot.database.fetch("SELECT * FROM virtualfisher WHERE user_id = %s",
                                              (self.bot.user.id,),
                                              one=True)

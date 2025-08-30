@@ -93,12 +93,12 @@ class Bot(commands.Bot):
             "fields": [
                 {
                     "name": "> **Virtual Fisher**",
-                    "value": "**Fisher tasks**: 🔴Not Running\n**Worker tasks**: 🔴Not Running",
+                    "value": "**Fisher tasks**: 🔴 Not Running\n**Worker tasks**: 🔴 Not Running",
                     "inline": True
                 },
                 {
                     "name": "> **Idle Miner**",
-                    "value": "**Miner tasks**: 🔴Not Running\n**Farmer tasks**: 🔴Not Running",
+                    "value": "**Miner tasks**: 🔴 Not Running\n**Farmer tasks**: 🔴 Not Running",
                     "inline": True
                 },
                 {
@@ -142,7 +142,7 @@ class Bot(commands.Bot):
                                       72,
                                       f"🔔Log File From Bot: {self.user.name}\n")
 
-    def tasks_update(self, field_category: str, task_name: str, status: Literal["🟢Running", "🔴Not Running"]):
+    def tasks_update(self, field_category: str, task_name: str, status: Literal["🟢 Running", "🔴 Not Running"]):
         for field in self.data_embed["fields"]:
             if field_category in field["name"]:
                 lines = field["value"].split('\n')
