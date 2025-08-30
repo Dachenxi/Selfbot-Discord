@@ -106,8 +106,10 @@ class IdleMiner(commands.Cog):
         await asyncio.sleep(1)
         await self.slash_command["plant"].__call__(self.farmer_channel, area="all", crop=crops)
         await asyncio.sleep(1)
-        await self.slash_command["farm"].__call__(self.farmer_channel)
-        await asyncio.sleep((30 * 60) + random.randint(1,20))
+        farm_interaction = await self.slash_command["farm"].__call__(self.farmer_channel)
+        farm_message = await self.farmer_channel.fetch_message(farm_interaction.message.id)
+        minute, second = re.search(r"crop ready in (\d+)m(\d+)s", farm_message.embeds[0].description).groups()
+        await asyncio.sleep((int(minute) * 60) + int(second))
 
     @commands.command(name="miner", aliases=["m"])
     async def miner(self, ctx: commands.Context):
