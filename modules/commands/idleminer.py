@@ -82,7 +82,7 @@ class IdleMiner(commands.Cog):
                 delay = await _get_delay(message)
                 await asyncio.sleep(delay)
             else:
-                self.miner_tasks.stop()
+                self.miner_tasks.cancel()
                 await self.bot.embed.edit_embed(
                     self.bot.message_embed,
                     self.bot.tasks_update(
@@ -106,15 +106,35 @@ class IdleMiner(commands.Cog):
         await asyncio.sleep(1)
         await self.slash_command["plant"].__call__(self.farmer_channel, area="all", crop=crops)
         await asyncio.sleep(1)
+
         farm_interaction = await self.slash_command["farm"].__call__(self.farmer_channel)
         farm_message = await self.farmer_channel.fetch_message(farm_interaction.message.id)
-        minute, second = re.search(r"crop ready in (\d+)m(\d+)s", farm_message.embeds[0].description).groups()
+        hours = 0
+        minute = 0
+        second = 0
+        total_xp = 0
+        next_level_xp = 0
+
+        for embed in farm_message.embeds:
+            minute, second = re.search(r"crop ready in (\d+)m(\d+)s", embed.description).groups()
+            for field in embed.fields:
+                if "level" in field.name.lower():
+                    total_xp, next_level_xp = re.search(r"Total xp: ([\d,]+)\nNext level at: ([\d,]+)xp", field.value).groups()
+
+        self.bot.telegram_notif.send_message(
+            f"🔔Notification From Bot: {self.bot.user.name}\n"
+            f"🪵Plant Corps: {crops}\n"
+            f"⌛Next Harvest in {minute}m{second}s\n"
+            f"⭐Current XP: {total_xp} XP\n"
+            f"🌟Next Level at: {next_level_xp} XP",
+            80
+        )
         await asyncio.sleep((int(minute) * 60) + int(second))
 
     @commands.command(name="miner", aliases=["m"])
     async def miner(self, ctx: commands.Context):
         if self.miner_tasks.is_running():
-            self.miner_tasks.stop()
+            self.miner_tasks.cancel()
 
             await self.bot.embed.edit_embed(
                 self.bot.message_embed,
@@ -140,7 +160,7 @@ class IdleMiner(commands.Cog):
     @commands.command(name="idleminerfarmer", aliases=["imf"])
     async def idleminerfarmer(self, ctx: commands.Context, crops:str = "carrot"):
         if self.idle_miner_farm_tasks.is_running():
-            self.idle_miner_farm_tasks.stop()
+            self.idle_miner_farm_tasks.cancel()
 
             await self.bot.embed.edit_embed(
                 self.bot.message_embed,
@@ -168,7 +188,7 @@ class IdleMiner(commands.Cog):
                     message.author.id == self.idle_miner_id
                     and "code" in message.content.lower()
             ):
-                self.miner_tasks.stop()
+                self.miner_tasks.cancel()
 
                 await self.bot.embed.edit_embed(
                     self.bot.message_embed,
@@ -203,7 +223,7 @@ class IdleMiner(commands.Cog):
                     and "continue" in message.content.lower()
             ):
                 if self.miner_tasks.is_running():
-                    self.miner_tasks.stop()
+                    self.miner_tasks.cancel()
                 await self.miner_tasks.start()
 
     async def idle_miner_setup(self):
