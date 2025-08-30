@@ -77,10 +77,18 @@ class IdleMiner(commands.Cog):
                                             83)
                                     else:
                                         await children.click()
+                        await asyncio.sleep(random.randint(1, 2))
+
                 delay = await _get_delay(message)
                 await asyncio.sleep(delay)
             else:
-                self.miner_tasks.cancel()
+                self.miner_tasks.stop()
+                await self.bot.embed.edit_embed(
+                    self.bot.message_embed,
+                    self.bot.tasks_update(
+                        "Idle Miner",
+                        "Farmer tasks",
+                        "🔴 Not Running"))
                 logger.info("No buttons found, stopping miner task.")
 
         except Exception as e:
@@ -92,25 +100,26 @@ class IdleMiner(commands.Cog):
                 logger.error(f"Error in miner task: {e}")
                 pass
 
-
     @tasks.loop(seconds=1)
     async def idle_miner_farm_tasks(self, crops: str = "carrot"):
         await self.slash_command["harvest"].__call__(self.farmer_channel, area="all")
+        await asyncio.sleep(1)
         await self.slash_command["plant"].__call__(self.farmer_channel, area="all", crop=crops)
+        await asyncio.sleep(1)
         await self.slash_command["farm"].__call__(self.farmer_channel)
         await asyncio.sleep((30 * 60) + random.randint(1,20))
 
     @commands.command(name="miner", aliases=["m"])
     async def miner(self, ctx: commands.Context):
         if self.miner_tasks.is_running():
-            self.miner_tasks.cancel()
+            self.miner_tasks.stop()
 
             await self.bot.embed.edit_embed(
                 self.bot.message_embed,
                 self.bot.tasks_update(
                     "Idle Miner",
                     "Miner tasks",
-                    "🔴Not Running"))
+                    "🔴 Not Running"))
 
             await ctx.channel.send("Miner tasks stopped.")
         else:
@@ -122,21 +131,21 @@ class IdleMiner(commands.Cog):
                 self.bot.tasks_update(
                     "Idle Miner",
                     "Miner tasks",
-                    "🟢Running"))
+                    "🟢 Running"))
 
             await self.miner_tasks.start()
 
     @commands.command(name="idleminerfarmer", aliases=["imf"])
     async def idleminerfarmer(self, ctx: commands.Context, crops:str = "carrot"):
         if self.idle_miner_farm_tasks.is_running():
-            self.idle_miner_farm_tasks.cancel()
+            self.idle_miner_farm_tasks.stop()
 
             await self.bot.embed.edit_embed(
                 self.bot.message_embed,
                 self.bot.tasks_update(
                     "Idle Miner",
                     "Farmer tasks",
-                    "🔴Not Running"))
+                    "🔴 Not Running"))
 
             await ctx.channel.send("Idle miner farmer tasks stopped.")
         else:
@@ -146,7 +155,7 @@ class IdleMiner(commands.Cog):
                 self.bot.tasks_update(
                     "Idle Miner",
                     "Farmer tasks",
-                    "🟢Running"))
+                    "🟢 Running"))
 
             await self.idle_miner_farm_tasks.start(crops=crops)
 
@@ -157,7 +166,15 @@ class IdleMiner(commands.Cog):
                     message.author.id == self.idle_miner_id
                     and "code" in message.content.lower()
             ):
-                self.miner_tasks.cancel()
+                self.miner_tasks.stop()
+
+                await self.bot.embed.edit_embed(
+                    self.bot.message_embed,
+                    self.bot.tasks_update(
+                        "Idle Miner",
+                        "Farmer tasks",
+                        "🔴 Not Running"))
+
                 self.bot.telegram_notif.send_message(f"🔔Notification From Bot: {self.bot.user.name}\n"
                                                      f"🤖Anti Bot Message from idle miner is detected\n"
                                                      f"✉️Message Content: {message.content}\n"
@@ -184,41 +201,34 @@ class IdleMiner(commands.Cog):
                     and "continue" in message.content.lower()
             ):
                 if self.miner_tasks.is_running():
-                    self.miner_tasks.cancel()
+                    self.miner_tasks.stop()
                 await self.miner_tasks.start()
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def idle_miner_setup(self):
+        logger.info("Setting up Idle Miner")
         data_database = await self.bot.database.fetch("SELECT * FROM idle_miner WHERE user_id = %s",
                                                       (self.bot.user.id,),
                                                       True)
         if not data_database:
             logger.warning("Idle miner data not found in database, creating a new entry.")
-            await self.bot.database.execute("INSERT INTO idle_miner (user_id) VALUES (%s)", (self.bot.user.id,))
+            miner_channel_id = int(input("Enter miner channel ID for Idle Miner: "))
+            farmer_channel_id = int(input("Enter farmer channel ID for Idle Miner Farmer: "))
+            await self.bot.database.execute("INSERT INTO idle_miner (user_id, farmer_channel_id, miner_channel_id) VALUES (%s, %s, %s)",
+                                            (self.bot.user.id, farmer_channel_id, miner_channel_id))
+            logger.info("Idle miner data has been created in the database.")
             data_database = await self.bot.database.fetch("SELECT * FROM idle_miner WHERE user_id = %s",
                                                           (self.bot.user.id,),
                                                           True)
         self.data = data_database
-
-        # Get channel and Slash Command
-        logger.info(f"Get Channel for Idle Miner: {self.data['miner_channel_id']} and {self.data['farmer_channel_id']}")
-        if not self.data['miner_channel_id'] or self.data['miner_channel_id'] == 0:
-            self.data['miner_channel_id'] = int(input("Enter miner channel ID for Idle Miner: "))
-            await self.bot.database.execute("UPDATE idle_miner SET miner_channel_id = %s WHERE user_id = %s",
-                                            (self.data['miner_channel_id'], self.bot.user.id))
-        if not self.data['farmer_channel_id'] or self.data['farmer_channel_id'] == 0:
-            self.data['farmer_channel_id'] = int(input("Enter farmer channel ID for Idle Miner Farmer: "))
-            await self.bot.database.execute("UPDATE idle_miner SET farmer_channel_id = %s WHERE user_id = %s",
-                                            (self.data['farmer_channel_id'], self.bot.user.id))
-
+        await asyncio.sleep(1)
         self.miner_channel = self.bot.get_channel(self.data['miner_channel_id'])
         self.farmer_channel = self.bot.get_channel(self.data['farmer_channel_id'])
         if not self.miner_channel:
             logger.error("Channel not found. Please update the channel ID.")
             return
 
-        logger.info(f"Get Slash Command for Idle Miner in channel {self.miner_channel.name} or {self.farmer_channel.name}")
-
+        logger.info(f"Get Idle Miner Slash Command for Idle Miner in channel {self.miner_channel.name} or {self.farmer_channel.name}")
+        await asyncio.sleep(1)
         slash_command = await self.miner_channel.application_commands()
         for command in slash_command:
             if command.id == 968186271971287110:
@@ -232,11 +242,10 @@ class IdleMiner(commands.Cog):
             if all(self.slash_command.values()):
                 break
         if not all(self.slash_command.values()):
-            logger.error("Some of the Slash Command is not found, Check Again.")
+            logger.error("Some of the Idle Miner Slash Command is not found, Check Again.")
             return
 
-        logger.info("Slash Command Is Ready to use.")
-
+        logger.info("Idle Miner Slash Command Is Ready to use.")
 
 async def setup(bot: modules.Bot):
     await bot.add_cog(IdleMiner(bot))
