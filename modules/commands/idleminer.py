@@ -113,28 +113,51 @@ class IdleMiner(commands.Cog, TaskInterruptMixin):
 
         farm_interaction = await self.slash_command["farm"].__call__(self.farmer_channel)
         farm_message = await self.farmer_channel.fetch_message(farm_interaction.message.id)
-        hours = 0
-        minute = 0
-        second = 0
-        total_xp = 0
-        next_level_xp = 0
-
         for embed in farm_message.embeds:
-            minute, second = re.search(r"crop ready in (\d+)m(\d+)s", embed.description).groups()
+            time_pattern = r"crop ready in (?:(\d+)h)?\s?(?:(\d+)m)?\s?(?:(\d+)s)?"
+
+            match = re.search(time_pattern, embed.description)
+
+            total_seconds = 0
+            time_string = "N/A"
+
+            if match:
+                hours, minutes, seconds = match.groups()
+
+                if hours:
+                    total_seconds += int(hours) * 3600
+                if minutes:
+                    total_seconds += int(minutes) * 60
+                if seconds:
+                    total_seconds += int(seconds)
+
+                parts = []
+                if hours: parts.append(f"{hours}h")
+                if minutes: parts.append(f"{minutes}m")
+                if seconds: parts.append(f"{seconds}s")
+                time_string = "".join(parts)
+
+            total_xp_str = "0"
+            next_level_xp_str = "0"
             for field in embed.fields:
                 if "level" in field.name.lower():
-                    total_xp, next_level_xp = re.search(r"Total xp: ([\d,]+)\nNext level at: ([\d,]+)xp", field.value).groups()
+                    xp_match = re.search(r"Total xp: ([\d,]+)\nNext level at: ([\d,]+)xp", field.value)
+                    if xp_match:
+                        total_xp_str = xp_match.group(1).replace(",", "")
+                        next_level_xp_str = xp_match.group(2).replace(",", "")
 
-        self.bot.telegram_notif.send_message(
-            f"🔔Notification From Bot: {self.bot.user.name}\n"
-            f"🪵Plant Corps: {crops}\n"
-            f"⌛Next Harvest in {minute}m{second}s\n"
-            f"⭐Current XP: {total_xp} XP\n"
-            f"🌟Next Level at: {next_level_xp} XP",
-            80
-        )
-        if await self.interruptible_wait((int(minute) * 60) + int(second)):
-            return
+            self.bot.telegram_notif.send_message(
+                f"🔔Notification From Bot: {self.bot.user.name}\n"
+                f"🪵Plant Corps: {crops}\n"
+                f"⌛Next Harvest in {time_string}\n"
+                f"⭐Current XP: {int(total_xp_str):,} XP\n"
+                f"🌟Next Level at: {int(next_level_xp_str):,} XP",
+                80
+            )
+
+            if total_seconds > 0:
+                if await self.interruptible_wait(total_seconds):
+                    return
 
     @commands.command(name="miner", aliases=["m"])
     async def miner(self, ctx: commands.Context):

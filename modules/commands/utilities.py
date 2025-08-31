@@ -81,7 +81,7 @@ class Utilities(commands.Cog):
             self.bot.telegram_notif.edit_message(int(notif["result"]["message_id"]),
                                                  f"⚠️Anti-Bot Message detected⚠️\n```json\n{embed_dict}\n```\nFound Code: `{code}`")
         else:
-            await message.forward(self.bot.owner)
+            await message.forward(self.bot.owner.dm_channel)
 
     @commands.command(name="antibot checker", aliases=["ac"])
     async def antibot_checker(self, ctx: commands.Context):
