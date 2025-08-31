@@ -6,6 +6,7 @@ import logging
 import re
 import time
 from discord.ext import commands, tasks
+from modules import TaskInterruptMixin
 
 
 logger = logging.getLogger("Idle Miner Cog")
@@ -22,14 +23,15 @@ async def _get_delay(message: discord.Message) -> int:
                     delay = target_time - time_now
                     if delay < 2:
                         delay = 5
-                    elif delay > 600:
-                        delay = 600
+                    elif delay > 180:
+                        delay = 180
                     return delay
                 break
     return 5
 
-class IdleMiner(commands.Cog):
+class IdleMiner(commands.Cog, TaskInterruptMixin):
     def __init__(self, bot: modules.Bot):
+        super().__init__()
         self.bot = bot
         self.data: dict = {}
         self.message_id: int = 0
@@ -77,12 +79,14 @@ class IdleMiner(commands.Cog):
                                             83)
                                     else:
                                         await children.click()
-                        await asyncio.sleep(random.randint(1, 2))
+                        if await self.interruptible_wait(random.randint(1, 2)):
+                            return
 
                 delay = await _get_delay(message)
-                await asyncio.sleep(delay)
+                if await self.interruptible_wait(delay):
+                    return
             else:
-                self.miner_tasks.cancel()
+                self.interrupt(self.miner_tasks)
                 await self.bot.embed.edit_embed(
                     self.bot.message_embed,
                     self.bot.tasks_update(
@@ -129,12 +133,15 @@ class IdleMiner(commands.Cog):
             f"🌟Next Level at: {next_level_xp} XP",
             80
         )
-        await asyncio.sleep((int(minute) * 60) + int(second))
+        if await self.interruptible_wait((int(minute) * 60) + int(second)):
+            return
 
     @commands.command(name="miner", aliases=["m"])
     async def miner(self, ctx: commands.Context):
+        self.clear_interrupt()
+
         if self.miner_tasks.is_running():
-            self.miner_tasks.cancel()
+            self.interrupt(self.miner_tasks)
 
             await self.bot.embed.edit_embed(
                 self.bot.message_embed,
@@ -159,8 +166,10 @@ class IdleMiner(commands.Cog):
 
     @commands.command(name="idleminerfarmer", aliases=["imf"])
     async def idleminerfarmer(self, ctx: commands.Context, crops:str = "carrot"):
+        self.clear_interrupt()
+
         if self.idle_miner_farm_tasks.is_running():
-            self.idle_miner_farm_tasks.cancel()
+            self.interrupt(self.idle_miner_farm_tasks)
 
             await self.bot.embed.edit_embed(
                 self.bot.message_embed,
@@ -188,7 +197,7 @@ class IdleMiner(commands.Cog):
                     message.author.id == self.idle_miner_id
                     and "code" in message.content.lower()
             ):
-                self.miner_tasks.cancel()
+                self.interrupt(self.miner_tasks)
 
                 await self.bot.embed.edit_embed(
                     self.bot.message_embed,
@@ -222,8 +231,9 @@ class IdleMiner(commands.Cog):
                     message.author.id == self.idle_miner_id
                     and "continue" in message.content.lower()
             ):
+                self.clear_interrupt()
                 if self.miner_tasks.is_running():
-                    self.miner_tasks.cancel()
+                    self.interrupt(self.miner_tasks)
                 await self.miner_tasks.start()
 
     async def idle_miner_setup(self):

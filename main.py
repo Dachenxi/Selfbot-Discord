@@ -38,13 +38,20 @@ def exception_handler(loop, context):
         return
     loop.default_exception_handler(context)
 
+
 if __name__ == "__main__":
-    event = asyncio.new_event_loop()
-    asyncio.set_event_loop(event)
-    event.set_exception_handler(exception_handler)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.set_exception_handler(exception_handler)
+
     try:
-        event.run_until_complete(run_bot())
+        logger.info("Bot is starting...")
+        loop.run_until_complete(run_bot())
     except KeyboardInterrupt:
-        pass
+        logger.warning("Shutdown signal received (Ctrl+C). Cleaning up...")
+        loop.run_until_complete(bot.deactivate())
     finally:
-        event.close()
+        logger.info("Closing the event loop.")
+        loop.close()
+
+    logger.info("Bot has been shut down gracefully.")
