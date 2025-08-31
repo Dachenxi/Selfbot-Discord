@@ -198,6 +198,7 @@ class IdleMiner(commands.Cog, TaskInterruptMixin):
                     and "code" in message.content.lower()
             ):
                 self.interrupt(self.miner_tasks)
+                self.interrupt(self.idle_miner_farm_tasks)
 
                 await self.bot.embed.edit_embed(
                     self.bot.message_embed,
@@ -234,7 +235,10 @@ class IdleMiner(commands.Cog, TaskInterruptMixin):
                 self.clear_interrupt()
                 if self.miner_tasks.is_running():
                     self.interrupt(self.miner_tasks)
+                if self.idle_miner_farm_tasks.is_running():
+                    self.interrupt(self.idle_miner_farm_tasks)
                 await self.miner_tasks.start()
+                await self.idle_miner_farm_tasks.start()
 
     async def idle_miner_setup(self):
         logger.info("Setting up Idle Miner")

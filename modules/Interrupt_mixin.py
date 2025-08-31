@@ -17,7 +17,7 @@ class TaskInterruptMixin:
             return False
 
     def interrupt(self, task: tasks.Loop):
-        print(f"Interrupting task: {task.coro.__name__}")
+        logger.warning(f"Interrupting task: {task.coro.__name__}")
         self._interrupt_event.set()
         task.cancel()
 
