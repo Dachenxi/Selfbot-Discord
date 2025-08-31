@@ -216,6 +216,12 @@ class Utilities(commands.Cog):
         else:
             await ctx.channel.send("Pesan yang direferensikan bukan database VirtualFisher inventory.")
 
+    @commands.command(name="status", aliases=["st"])
+    async def status(self, ctx: commands.Context):
+        status_embed = await self.bot.message_embed.forward(ctx.channel)
+        await asyncio.sleep(5)
+        await status_embed.delete()
+
 async def setup(bot: commands.Bot):
     await bot.add_cog(Utilities(bot))
     logger.info("Utilies command berhasil di load")
