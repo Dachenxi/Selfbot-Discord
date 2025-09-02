@@ -64,6 +64,7 @@ class IdleMiner(commands.Cog, TaskInterruptMixin):
                                     if "playSell" in children.custom_id:
                                         for loop in range(5):
                                             await children.click()
+                                            logger.info(f"Clicking Button {children.label}")
                                             await asyncio.sleep(random.randint(3, 5))
                                     elif "playRebirth" in children.custom_id:
                                         await children.click()
@@ -71,14 +72,17 @@ class IdleMiner(commands.Cog, TaskInterruptMixin):
                                             f"🔔Notification From Bot: {self.bot.user.name}\n"
                                             f"⌛Miner Tasks Perform Rebirth",
                                             83)
+                                        logger.info(f"Clicking Button {children.label}")
                                     elif "playPrestige" in children.custom_id:
                                         await children.click()
                                         self.bot.telegram_notif.send_message(
                                             f"🔔Notification From Bot: {self.bot.user.name}\n"
                                             f"⌛Miner Tasks Perform Prestige",
                                             83)
+                                        logger.info(f"Clicking Button {children.label}")
                                     else:
                                         await children.click()
+                                        logger.info(f"Clicking Button {children.label}")
                         if await self.interruptible_wait(random.randint(1, 2)):
                             return
 
