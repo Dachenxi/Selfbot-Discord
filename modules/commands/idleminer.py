@@ -111,8 +111,10 @@ class IdleMiner(commands.Cog, TaskInterruptMixin):
     @tasks.loop(seconds=1)
     async def idle_miner_farm_tasks(self, crops: str = "carrot"):
         await self.slash_command["harvest"].__call__(self.farmer_channel, area="all")
+        logger.info(f"Harvesting all crops.")
         await asyncio.sleep(1)
         await self.slash_command["plant"].__call__(self.farmer_channel, area="all", crop=crops)
+        logger.info(f"Plant {crops} in all area.")
         await asyncio.sleep(1)
 
         farm_interaction = await self.slash_command["farm"].__call__(self.farmer_channel)
